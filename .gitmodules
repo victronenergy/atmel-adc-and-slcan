@@ -1,0 +1,3 @@
+[submodule "src/lib"]
+	path = src/lib
+	url = https://bitbucket.org/unipoin/sam_freertos_lib.git
