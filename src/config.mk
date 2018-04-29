@@ -60,9 +60,6 @@ CSRCS = ${LIB_CSRCS}\
 		utils/uart_setup.c \
 		
 
-
-
-
 # List of assembler source files.
 ASSRCS = 
 
@@ -73,7 +70,6 @@ INC_PATH = \
 		utils \
 		tasks \
 		
-
 
 
 #       ASF/sam0/boards/samc21_xplained_pro                    

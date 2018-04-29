@@ -145,33 +145,32 @@ set(SOURCE_FILES
 		lib/ASF/thirdparty/CMSIS/Include/core_cm0plus.h
 		lib/ASF/thirdparty/CMSIS/Include/core_cmFunc.h
 		lib/ASF/thirdparty/CMSIS/Include/core_cmInstr.h
-		lib/ASF/thirdparty/freertos/freertos-9.0.0/Source/include/croutine.h
-		lib/ASF/thirdparty/freertos/freertos-9.0.0/Source/include/deprecated_definitions.h
-		lib/ASF/thirdparty/freertos/freertos-9.0.0/Source/include/event_groups.h
-		lib/ASF/thirdparty/freertos/freertos-9.0.0/Source/include/FreeRTOS.h
-		lib/ASF/thirdparty/freertos/freertos-9.0.0/Source/include/list.h
-		lib/ASF/thirdparty/freertos/freertos-9.0.0/Source/include/mpu_prototypes.h
-		lib/ASF/thirdparty/freertos/freertos-9.0.0/Source/include/mpu_wrappers.h
-		lib/ASF/thirdparty/freertos/freertos-9.0.0/Source/include/portable.h
-		lib/ASF/thirdparty/freertos/freertos-9.0.0/Source/include/projdefs.h
-		lib/ASF/thirdparty/freertos/freertos-9.0.0/Source/include/queue.h
-		lib/ASF/thirdparty/freertos/freertos-9.0.0/Source/include/semphr.h
-		lib/ASF/thirdparty/freertos/freertos-9.0.0/Source/include/StackMacros.h
-		lib/ASF/thirdparty/freertos/freertos-9.0.0/Source/include/task.h
-		lib/ASF/thirdparty/freertos/freertos-9.0.0/Source/include/timers.h
-		lib/ASF/thirdparty/freertos/freertos-9.0.0/Source/portable/GCC/ARM_CM0/port.c
-		lib/ASF/thirdparty/freertos/freertos-9.0.0/Source/portable/GCC/ARM_CM0/portmacro.h
-		lib/ASF/thirdparty/freertos/freertos-9.0.0/Source/portable/MemMang/heap_1.c
-		lib/ASF/thirdparty/freertos/freertos-9.0.0/Source/portable/MemMang/heap_2.c
-		lib/ASF/thirdparty/freertos/freertos-9.0.0/Source/portable/MemMang/heap_3.c
-		lib/ASF/thirdparty/freertos/freertos-9.0.0/Source/portable/MemMang/heap_4.c
-		lib/ASF/thirdparty/freertos/freertos-9.0.0/Source/portable/MemMang/heap_5.c
-		lib/ASF/thirdparty/freertos/freertos-9.0.0/Source/croutine.c
-		lib/ASF/thirdparty/freertos/freertos-9.0.0/Source/event_groups.c
-		lib/ASF/thirdparty/freertos/freertos-9.0.0/Source/list.c
-		lib/ASF/thirdparty/freertos/freertos-9.0.0/Source/queue.c
-		lib/ASF/thirdparty/freertos/freertos-9.0.0/Source/tasks.c
-		lib/ASF/thirdparty/freertos/freertos-9.0.0/Source/timers.c
+		lib/ASF/thirdparty/freertos/freertos-10.0.0/Source/include/croutine.h
+		lib/ASF/thirdparty/freertos/freertos-10.0.0/Source/include/deprecated_definitions.h
+		lib/ASF/thirdparty/freertos/freertos-10.0.0/Source/include/event_groups.h
+		lib/ASF/thirdparty/freertos/freertos-10.0.0/Source/include/FreeRTOS.h
+		lib/ASF/thirdparty/freertos/freertos-10.0.0/Source/include/list.h
+		lib/ASF/thirdparty/freertos/freertos-10.0.0/Source/include/mpu_wrappers.h
+		lib/ASF/thirdparty/freertos/freertos-10.0.0/Source/include/portable.h
+		lib/ASF/thirdparty/freertos/freertos-10.0.0/Source/include/projdefs.h
+		lib/ASF/thirdparty/freertos/freertos-10.0.0/Source/include/queue.h
+		lib/ASF/thirdparty/freertos/freertos-10.0.0/Source/include/semphr.h
+		lib/ASF/thirdparty/freertos/freertos-10.0.0/Source/include/stack_macros.h
+		lib/ASF/thirdparty/freertos/freertos-10.0.0/Source/include/task.h
+		lib/ASF/thirdparty/freertos/freertos-10.0.0/Source/include/timers.h
+		lib/ASF/thirdparty/freertos/freertos-10.0.0/Source/portable/GCC/ARM_CM0/port.c
+		lib/ASF/thirdparty/freertos/freertos-10.0.0/Source/portable/GCC/ARM_CM0/portmacro.h
+		lib/ASF/thirdparty/freertos/freertos-10.0.0/Source/portable/MemMang/heap_1.c
+		lib/ASF/thirdparty/freertos/freertos-10.0.0/Source/portable/MemMang/heap_2.c
+		lib/ASF/thirdparty/freertos/freertos-10.0.0/Source/portable/MemMang/heap_3.c
+		lib/ASF/thirdparty/freertos/freertos-10.0.0/Source/portable/MemMang/heap_4.c
+		lib/ASF/thirdparty/freertos/freertos-10.0.0/Source/portable/MemMang/heap_5.c
+		lib/ASF/thirdparty/freertos/freertos-10.0.0/Source/croutine.c
+		lib/ASF/thirdparty/freertos/freertos-10.0.0/Source/event_groups.c
+		lib/ASF/thirdparty/freertos/freertos-10.0.0/Source/list.c
+		lib/ASF/thirdparty/freertos/freertos-10.0.0/Source/queue.c
+		lib/ASF/thirdparty/freertos/freertos-10.0.0/Source/tasks.c
+		lib/ASF/thirdparty/freertos/freertos-10.0.0/Source/timers.c
 		lib/freemodbus-1.5.0/modbus/mb.c
 		lib/freemodbus-1.5.0/modbus/functions/mbfunccoils.c
 		lib/freemodbus-1.5.0/modbus/functions/mbfuncdiag.c
@@ -240,8 +239,8 @@ include_directories(lib/ASF/sam0/utils/header_files)
 include_directories(lib/ASF/sam0/utils/preprocessor)
 include_directories(lib/ASF/thirdparty/CMSIS/Lib/GCC)
 include_directories(lib/ASF/thirdparty/CMSIS/Include)
-include_directories(lib/ASF/thirdparty/freertos/freertos-9.0.0/Source/include)
-include_directories(lib/ASF/thirdparty/freertos/freertos-9.0.0/Source/portable/GCC/ARM_CM0)
+include_directories(lib/ASF/thirdparty/freertos/freertos-10.0.0/Source/include)
+include_directories(lib/ASF/thirdparty/freertos/freertos-10.0.0/Source/portable/GCC/ARM_CM0)
 include_directories(lib/freemodbus-1.5.0/port/sam0)
 include_directories(lib/freemodbus-1.5.0/modbus/include)
 include_directories(lib/freemodbus-1.5.0/modbus/rtu)
@@ -252,7 +251,7 @@ include_directories(utils)
 include_directories(sunspec)
 include_directories(vebus)
 include_directories(velib/inc)
-include_directories(../src)
+include_directories(.)
 
 add_definitions(-D ARM_MATH_CM0PLUS=true)
 add_definitions(-D BOARD=GRIDLESS_conv_ve_bus_A1)
