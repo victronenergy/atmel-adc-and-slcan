@@ -45,12 +45,12 @@ PRJ_PATH = .
 ARCH = cortex-m0plus
 
 # Target part: none, sam3n4 or sam4l4aa
-PART = samc21e18a
+PART = samc21j18a
 
 # Application target name. Given with suffix .a for library and .elf for a
 # standalone application.
-TARGET_FLASH = build/gridless_conv_vebus.elf
-TARGET_SRAM = build/gridless_conv_vebus.elf
+TARGET_FLASH = cmake-build-debug/gridless_conv_vebus.elf
+TARGET_SRAM = cmake-build-debug/gridless_conv_vebus.elf
 
 # List of C source files.
 CSRCS = ${LIB_CSRCS}\
@@ -120,9 +120,9 @@ CFLAGS =
 #   EXT_BOARD  Optional extension board in use, see boards/board.h for a list.
 CPPFLAGS = \
        -D ARM_MATH_CM0PLUS=true                           \
-       -D BOARD=USER_BOARD                       \
+       -D BOARD=SAMC21_XPLAINED_PRO                       \
        -D CUSTOM_BOARD=CUSTOM_BOARD_TEMPLATE \
-       -D __SAMC21E18A__								  \
+       -D __SAMC21J18A__								  \
        -D USART_CALLBACK_MODE=true						\
        -D __FREERTOS__	\
 		-D SYSTICK_MODE	\

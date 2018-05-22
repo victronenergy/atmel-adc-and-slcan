@@ -528,7 +528,7 @@ void system_board_init(void);
  * @{
  */
 #define CAN_MODULE              CAN0
-#define CAN_TX_PIN              PIN_PA24G_CAN0_TX
+#define CAN_TX_PIN				PIN_PA24G_CAN0_TX
 #define CAN_TX_MUX_SETTING      MUX_PA24G_CAN0_TX
 #define CAN_RX_PIN              PIN_PA25G_CAN0_RX
 #define CAN_RX_MUX_SETTING      MUX_PA25G_CAN0_RX

@@ -29,12 +29,16 @@ void board_init(void) {
 }
 
 uint8_t readHWrev(void) {
-    uint8_t rev = 0;
+    /*
+     *
+
+	uint8_t rev = 0;
     struct port_config pin_conf;
     port_get_config_defaults(&pin_conf);
 
     /* Set buttons as inputs */
-    pin_conf.direction  = PORT_PIN_DIR_INPUT;
+    /*
+	pin_conf.direction  = PORT_PIN_DIR_INPUT;
     pin_conf.input_pull = PORT_PIN_PULL_DOWN;
     pin_conf.powersave = false;
     //enable input and pulldown on hw rev pins
@@ -54,4 +58,7 @@ uint8_t readHWrev(void) {
     port_pin_set_config(HW_REV_DETECTION_2, &pin_conf);
 
     return rev;
+     */
+	//TODO put HW rev detection back in
+	return 0;
 }

@@ -14,6 +14,9 @@ set(SOURCE_FILES
 		lib/ASF/common2/services/delay/sam0/systick_counter.h
 		lib/ASF/common2/services/delay/delay.h
         lib/ASF/sam0/boards/samc21_xplained_pro/samc21_xplained_pro.h
+		lib/ASF/sam0/drivers/can/can.h
+		lib/ASF/sam0/drivers/can/can.c
+		lib/ASF/sam0/drivers/can/module_config/conf_can.h
 		lib/ASF/sam0/drivers/nvm/nvm.c
 		lib/ASF/sam0/drivers/port/quick_start/qs_port_basic.h
 		lib/ASF/sam0/drivers/port/port.c
@@ -217,6 +220,8 @@ include_directories(lib/ASF/common/boards)
 include_directories(lib/ASF/common/utils)
 include_directories(lib/ASF/common2/services/delay)
 include_directories(lib/ASF/sam0/boards)
+include_directories(lib/ASF/sam0/drivers/can)
+include_directories(lib/ASF/sam0/drivers/can/module_config)
 include_directories(lib/ASF/sam0/drivers/port)
 include_directories(lib/ASF/sam0/drivers/sercom)
 include_directories(lib/ASF/sam0/drivers/sercom/usart)

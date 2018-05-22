@@ -126,3 +126,4 @@ $RECYCLE.BIN/
 src/build/
 .idea
 cmake-build-debug
+/.project
