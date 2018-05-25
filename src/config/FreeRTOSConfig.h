@@ -141,9 +141,9 @@ header file. */
 /* Definitions that map the FreeRTOS port interrupt handlers to their CMSIS
 standard names.Based on the architecture  choosen, the below definitons may be needed*/
 
-/*#define xPortPendSVHandler PendSV_Handler
+#define xPortPendSVHandler PendSV_Handler
 #define vPortSVCHandler SVC_Handler
-#define xPortSysTickHandler SysTick_Handler */
+#define xPortSysTickHandler SysTick_Handler
 
 #endif /* FREERTOS_CONFIG_H */
 

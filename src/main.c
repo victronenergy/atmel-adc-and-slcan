@@ -4,7 +4,9 @@
 #include <board_setup.h>
 #include "stdint.h"
 #include "conf_can.h"
+#include "can_task.h"
 #include "can.h"
+#include "samc21_xplained_pro.h"
 
 
 //TODO set correct value
@@ -45,9 +47,9 @@ int main(void) {
 	pin_conf_led.direction  = PORT_PIN_DIR_OUTPUT;
 	port_pin_set_config(LED_0_PIN, &pin_conf_led);
 
-	port_pin_set_output_level(LED_0_PIN, LED_0_ACTIVE);
+	port_pin_set_output_level(LED_0_PIN, LED_0_INACTIVE);
 
-
+/*
 	// CAN TX/RX pins
 	struct system_pinmux_config pin_config;
 	system_pinmux_get_config_defaults(&pin_config);
@@ -56,20 +58,23 @@ int main(void) {
 	pin_config.mux_position = CAN_RX_MUX_SETTING;
 	system_pinmux_pin_set_config(CAN_RX_PIN, &pin_config);
 
+/*
+
 	// CAN Module Initialization
 	struct can_config config_can;
 	can_get_config_defaults(&config_can);
 	can_init(&can_instance, CAN_MODULE, &config_can);
 	//TODO include/replace (seems to be outdated)
 	//can_switch_operation_mode(&can_instance, CAN_OPERATION_MODE_NORMAL_OPERATION);
-	system_interrupt_enable(SYSTEM_INTERRUPT_MODULE_CAN0);
+*/
+
 
 
 	//send CAN standard message
-
+/*
 	uint8_t data[8] = {0};
 	can_send_standard_message(17,data);
-
+*/
 
 	/*
 	 * Add Methods here that needs to run before interrupts are enabled!
@@ -89,8 +94,10 @@ int main(void) {
 
 	configure_ulog(&debug_ulog);
 	ulog_s("prepare Tasks\r\n");
-	vCreateStackTask(NULL, 0);
-
+	TaskHandle_t task_handles[1];
+	TaskHandle_t can_task = vCreateCanTask();
+	task_handles[0] = &can_task;
+	vCreateStackTask(&task_handles, 1);
 
 	ulog_s("start scheduler\r\n");
 	vTaskStartScheduler();

@@ -20,7 +20,7 @@ void test_mark(UBaseType_t *rev, TaskHandle_t *task, bool override) {
 	if (i != *rev || override) {
 		*rev = i;
 		uint8_t s[16];
-		uint8_t l = sprintf((char *) &s[0], "%lu", *rev);
+		uint8_t l = (uint8_t) sprintf((char *) &s[0], "%lu", *rev);
 		ulog_s(pcTaskGetName(*task));
 		ulog_s(" mark: ");
 		xlog(s, l);
@@ -29,6 +29,7 @@ void test_mark(UBaseType_t *rev, TaskHandle_t *task, bool override) {
 //		xlog(s, l);
 
 		ulog_s("\r\n");
+
 	}
 }
 
@@ -50,25 +51,26 @@ void vStackTask(void *pvParameters) {
 	vTaskDelay((const TickType_t) 100);
 
 	for (uint8_t i = 0; i<num_handles; i++) {
-		vTaskResume((*task_handles)[i]);
+		vTaskResume(*(task_handles[i]));
 		vTaskDelay((const TickType_t) 100);
 	}
-
 	for (;;) {
 		const bool override = false;
 		for (uint8_t i = 0; i<num_handles; i++) {
-			test_mark( &freemem[i], (*task_handles)[i], override);
+			test_mark( &freemem[i], &(*(task_handles[i])), override);
 		}
 		test_mark( &freemem[num_handles+1], &s, override);
 		vTaskDelay((const TickType_t) 1000);
+
 	}
 }
 
 
 
 
-TaskHandle_t vCreateStackTask(TaskHandle_t *handles, uint8_t count) {
-	*task_handles = handles;
+TaskHandle_t vCreateStackTask(TaskHandle_t **handles, uint8_t count) {
+
+	task_handles = handles;
 	num_handles = count;
 
 	ulog_s("creating Stack Task...\r\n");
@@ -91,7 +93,7 @@ TaskHandle_t vCreateStackTask(TaskHandle_t *handles, uint8_t count) {
 
 		/* The task was created.  Use the task's handle to delete the task. */
 		//vTaskDelete( xHandle );
-		vTaskSuspend(xHandle);
+		//vTaskSuspend(xHandle);
 		return xHandle;
 	}
 	return NULL;
