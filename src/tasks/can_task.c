@@ -14,9 +14,14 @@ void vCanTask(void *pvParameters) {
 
 	vTaskDelay((const TickType_t) 100);
 
+	//TODO prepare CAN interface
+
 	for (;;) {
+		vTaskDelay((const TickType_t) 100);
 		port_pin_toggle_output_level(LED_0_PIN);
-		vTaskDelay((const TickType_t) 1000);
+
+		// TODO perform CAN task
+
 	}
 }
 

@@ -12,5 +12,6 @@
 #include <log.h>
 
 void configure_log_uart(usart_module_t *usart_module);
+void configure_can_uart(usart_module_t *usart_module);
 
 #endif //SAMC_FREERTOS_COMM_INIT_H

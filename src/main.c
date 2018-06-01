@@ -35,19 +35,15 @@ int main(void) {
 	system_init();
 	delay_init();
 
+	//TODO remove, only for debug (LED and buttons on xplained board)
+	board_init();
+
 	/*
 	 * Add Variables here
 	 */
 	usart_module_t debug_ulog;
+	usart_module_t can_uart;
 
-
-	struct port_config pin_conf_led;
-	port_get_config_defaults(&pin_conf_led);
-
-	pin_conf_led.direction  = PORT_PIN_DIR_OUTPUT;
-	port_pin_set_config(LED_0_PIN, &pin_conf_led);
-
-	port_pin_set_output_level(LED_0_PIN, LED_0_INACTIVE);
 
 /*
 	// CAN TX/RX pins
@@ -58,7 +54,7 @@ int main(void) {
 	pin_config.mux_position = CAN_RX_MUX_SETTING;
 	system_pinmux_pin_set_config(CAN_RX_PIN, &pin_config);
 
-/*
+
 
 	// CAN Module Initialization
 	struct can_config config_can;
@@ -80,6 +76,8 @@ int main(void) {
 	 * Add Methods here that needs to run before interrupts are enabled!
 	 */
 	configure_log_uart(&debug_ulog);
+
+	configure_can_uart(&can_uart);
 
 
 	/*

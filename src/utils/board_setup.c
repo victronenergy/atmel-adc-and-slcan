@@ -1,6 +1,7 @@
 #include <asf.h>
 #include <board_setup.h>
 #include <log.h>
+#include "samc21_xplained_pro.h"
 
 // PROTOTYPES
 void vApplicationStackOverflowHook(TaskHandle_t *pxTask, signed portCHAR *pcTaskName);
@@ -26,6 +27,14 @@ void board_init(void) {
 	pin_conf.direction  = PORT_PIN_DIR_INPUT;
 	pin_conf.input_pull = PORT_PIN_PULL_UP;
 	port_pin_set_config(BUTTON_0_PIN, &pin_conf);
+
+
+	// LED
+	struct port_config pin_conf_led;
+	port_get_config_defaults(&pin_conf_led);
+
+	pin_conf_led.direction  = PORT_PIN_DIR_OUTPUT;
+	port_pin_set_config(LED_0_PIN, &pin_conf_led);
 }
 
 uint8_t readHWrev(void) {

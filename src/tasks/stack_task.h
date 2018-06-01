@@ -22,6 +22,6 @@
  * @param count number of TaskHandle_t in array
  * @return Handle of the StackTask
  */
-TaskHandle_t vCreateStackTask(TaskHandle_t **handles, uint8_t count);
+TaskHandle_t vCreateStackTask(TaskHandle_t *handles[], uint8_t count);
 
 #endif //SAMC_FREERTOS_STACK_TASK_H

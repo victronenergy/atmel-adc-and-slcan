@@ -213,7 +213,7 @@ set(SOURCE_FILES
 		utils/board_setup.h
 		tasks/stack_task.c
 		tasks/stack_task.h
-		)
+		tasks/can_task.c tasks/can_task.h)
 
 
 include_directories(lib/ASF/common/boards)

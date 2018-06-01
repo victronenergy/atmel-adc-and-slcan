@@ -151,7 +151,8 @@ else
 ifeq ($(os),OSX)
 RMDIR           := echo 
 else
-RMDIR           := rmdir -p --ignore-fail-on-non-empty
+#RMDIR           := rmdir -p --ignore-fail-on-non-empty
+RMDIR           := echo
 endif
 endif
 

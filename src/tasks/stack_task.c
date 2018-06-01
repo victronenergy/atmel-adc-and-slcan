@@ -68,7 +68,7 @@ void vStackTask(void *pvParameters) {
 
 
 
-TaskHandle_t vCreateStackTask(TaskHandle_t **handles, uint8_t count) {
+TaskHandle_t vCreateStackTask(TaskHandle_t *handles[], uint8_t count) {
 
 	task_handles = handles;
 	num_handles = count;
