@@ -22,7 +22,8 @@
 // 1.00     24/08/2005  Michael Wolf  Initial Release
 //
 //*****************************************************************************
-#include <avr/io.h>
+#include "log.h"
+
 #ifndef __USB_H__
 #define __USB_H__
 
@@ -43,9 +44,10 @@
 #define USB_TXE  PD5		// FT245BM TXE pin
 #define USB_RXF  PE0		// FT245BM RXF pin
 
-uint8_t usb_getc (void);
-void usb_putc (uint8_t tx_byte);
-void usb_byte2ascii (uint8_t tx_byte);
-void usb_puts (uint8_t * tx_string);
+uint8_t usb_getc (usart_module_t *usart_instance, uint8_t *uart_rx_buffer);
+void usb_putc (usart_module_t *usart_instance, uint8_t tx_byte);
+void usb_byte2ascii (usart_module_t *usart_instance, uint8_t tx_byte);
+uint8_t ascii2byte (uint8_t * val);
+void usb_puts (usart_module_t *usart_instance, uint8_t * tx_string);
 
 #endif // __USB_H__

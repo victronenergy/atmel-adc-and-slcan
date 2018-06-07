@@ -59,6 +59,7 @@ CSRCS = ${LIB_CSRCS}\
 		tasks/can_task.c	\
 		utils/board_setup.c \
 		utils/uart_setup.c \
+		canbus/usb.c	\
 		
 
 # List of assembler source files.
@@ -70,6 +71,7 @@ INC_PATH = \
 		config \
 		utils \
 		tasks \
+		canbus	\
 		
 
 

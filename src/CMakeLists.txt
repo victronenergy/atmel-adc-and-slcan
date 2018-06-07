@@ -129,9 +129,9 @@ set(SOURCE_FILES
 		lib/ASF/sam0/utils/cmsis/samc21/include/instance/tcc2.h
 		lib/ASF/sam0/utils/cmsis/samc21/include/instance/tsens.h
 		lib/ASF/sam0/utils/cmsis/samc21/include/instance/wdt.h
-		lib/ASF/sam0/utils/cmsis/samc21/include/pio/samc21e18a.h
+		lib/ASF/sam0/utils/cmsis/samc21/include/pio/samc21j18a.h
 		lib/ASF/sam0/utils/cmsis/samc21/include/samc21.h
-		lib/ASF/sam0/utils/cmsis/samc21/include/samc21e18a.h
+		lib/ASF/sam0/utils/cmsis/samc21/include/samc21j18a.h
 		lib/ASF/sam0/utils/cmsis/samc21/source/gcc/startup_samc21.c
 		lib/ASF/sam0/utils/cmsis/samc21/source/system_samc21.c
 		lib/ASF/sam0/utils/cmsis/samc21/source/system_samc21.h
@@ -213,7 +213,11 @@ set(SOURCE_FILES
 		utils/board_setup.h
 		tasks/stack_task.c
 		tasks/stack_task.h
-		tasks/can_task.c tasks/can_task.h)
+		tasks/can_task.c
+		tasks/can_task.h
+		canbus/usb.h
+		canbus/usb.c
+		)
 
 
 include_directories(lib/ASF/common/boards)
@@ -256,11 +260,12 @@ include_directories(utils)
 include_directories(sunspec)
 include_directories(vebus)
 include_directories(velib/inc)
+include_directories(canbus)
 include_directories(.)
 
 add_definitions(-D ARM_MATH_CM0PLUS=true)
 add_definitions(-D BOARD=GRIDLESS_conv_ve_bus_A1)
-add_definitions(-D __SAMC21E18A__)
+add_definitions(-D __SAMC21J18A__)
 add_definitions(-D USART_CALLBACK_MODE=true)
 add_definitions(-D __FREERTOS__)
 add_definitions(-D SYSTICK_MODE)

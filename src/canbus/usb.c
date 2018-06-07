@@ -22,7 +22,6 @@
 // 1.00     24/08/2005  Michael Wolf  Initial Release
 //
 //*****************************************************************************
-#include <avr/io.h>
 #include <stdint.h>
 
 #include "usb.h"
@@ -42,9 +41,12 @@
 **
 **---------------------------------------------------------------------------
 */
-uint8_t
-usb_getc (void)
+uint8_t usb_getc(usart_module_t *usart_instance, uint8_t *uart_rx_buffer)
 {
+    usart_read_buffer_wait(usart_instance, uart_rx_buffer, 1);
+    return uart_rx_buffer[0];
+
+    /*
     uint8_t rx_byte;
 
     // check for received characters
@@ -60,7 +62,7 @@ usb_getc (void)
     }
     else
     
-    return 0;		// return no char
+    return 0;		// return no char*/
 }
 
 
@@ -79,8 +81,11 @@ usb_getc (void)
 **---------------------------------------------------------------------------
 */
 void
-usb_putc (uint8_t tx_byte)
+usb_putc (usart_module_t *usart_instance, uint8_t tx_byte)
 {
+    usart_write_wait(usart_instance, tx_byte);
+
+    /*
     while ((USB_TX_PIN & _BV (USB_TXE)) == _BV (USB_TXE));	// wait for Tx ready
 
     USB_DATA_DIR = 0xFF;	// USB data port all output
@@ -92,7 +97,7 @@ usb_putc (uint8_t tx_byte)
     asm ("NOP");
 
     USB_DATA_DIR = 0x00;	// USB data port all inputs
-    USB_DATA_PORT = 0xFF;	// enable data port pull-ups
+    USB_DATA_PORT = 0xFF;	// enable data port pull-ups*/
 }
 
 
@@ -111,15 +116,29 @@ usb_putc (uint8_t tx_byte)
 **---------------------------------------------------------------------------
 */
 void
-usb_byte2ascii (uint8_t tx_byte)
+usb_byte2ascii (usart_module_t *usart_instance, uint8_t tx_byte)
 {
     // send high nibble
-    usb_putc (((tx_byte >> 4) <
+    usb_putc (usart_instance, ((tx_byte >> 4) <
 	       10) ? ((tx_byte >> 4) & 0x0f) + 48 : ((tx_byte >> 4) & 0x0f) +
 	      55);
     // send low nibble
-    usb_putc (((tx_byte & 0x0f) <
+    usb_putc (usart_instance, ((tx_byte & 0x0f) <
 	       10) ? (tx_byte & 0x0f) + 48 : (tx_byte & 0x0f) + 55);
+}
+
+
+uint8_t ascii2byte (uint8_t * val)
+{
+	uint8_t temp = *val;
+
+	if (temp > 0x60)
+		temp -= 0x27;		// convert chars a-f
+	else if (temp > 0x40)
+		temp -= 0x07;		// convert chars A-F
+	temp -= 0x30;		// convert chars 0-9
+
+	return (uint8_t) (temp & 0x0F);
 }
 
 
@@ -138,8 +157,8 @@ usb_byte2ascii (uint8_t tx_byte)
 **---------------------------------------------------------------------------
 */
 void
-usb_puts (uint8_t * tx_string)
+usb_puts (usart_module_t *usart_instance, uint8_t * tx_string)
 {
     while (*tx_string)
-        usb_putc (*tx_string++);	// send string char by char
+        usb_putc (usart_instance, *tx_string++);	// send string char by char
 }

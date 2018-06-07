@@ -16,6 +16,7 @@ static void can_send_standard_message(uint32_t id_value, uint8_t *data);
 
 struct can_module can_instance;
 
+
 static void can_send_standard_message(uint32_t id_value, uint8_t *data)
 {
 	uint32_t i;
@@ -42,6 +43,7 @@ int main(void) {
 	 * Add Variables here
 	 */
 	usart_module_t debug_ulog;
+	usart_module_t usart_instance;
 	usart_module_t can_uart;
 
 
@@ -77,8 +79,9 @@ int main(void) {
 	 */
 	configure_log_uart(&debug_ulog);
 
-	configure_can_uart(&can_uart);
+	//configure_can(&can_instance);
 
+	configure_uart(&usart_instance);
 
 	/*
 	 * Global Interrupts Enable!
@@ -93,7 +96,7 @@ int main(void) {
 	configure_ulog(&debug_ulog);
 	ulog_s("prepare Tasks\r\n");
 	TaskHandle_t task_handles[1];
-	TaskHandle_t can_task = vCreateCanTask();
+	TaskHandle_t can_task = vCreateCanTask(&usart_instance);
 	task_handles[0] = &can_task;
 	vCreateStackTask(&task_handles, 1);
 
