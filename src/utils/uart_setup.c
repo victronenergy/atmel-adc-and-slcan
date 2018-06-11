@@ -51,21 +51,22 @@ void configure_uart(usart_module_t *usart_module) {
 }
 
 void configure_can(struct can_module *can_instance){
-    /* Set up the CAN TX/RX pins */
-    struct system_pinmux_config pin_config;
-    system_pinmux_get_config_defaults(&pin_config);
-    pin_config.mux_position = CAN_TX_MUX_SETTING;
-    system_pinmux_pin_set_config(CAN_TX_PIN, &pin_config);
-    pin_config.mux_position = CAN_RX_MUX_SETTING;
-    system_pinmux_pin_set_config(CAN_RX_PIN, &pin_config);
-    /* Initialize the module. */
-    struct can_config config_can;
-    can_get_config_defaults(&config_can);
-    can_init(can_instance, CAN_MODULE, &config_can);
-    can_enable_fd_mode(can_instance);
-    can_start(can_instance);
-    /* Enable interrupts for this CAN module */
-    system_interrupt_enable(SYSTEM_INTERRUPT_MODULE_CAN0);
-    can_enable_interrupt(can_instance, CAN_PROTOCOL_ERROR_ARBITRATION
-            | CAN_PROTOCOL_ERROR_DATA);
+
+	/* Set up the CAN TX/RX pins */
+	struct system_pinmux_config pin_config;
+	system_pinmux_get_config_defaults(&pin_config);
+	pin_config.mux_position = CAN_TX_MUX_SETTING;
+	system_pinmux_pin_set_config(CAN_TX_PIN, &pin_config);
+	pin_config.mux_position = CAN_RX_MUX_SETTING;
+	system_pinmux_pin_set_config(CAN_RX_PIN, &pin_config);
+	/* Initialize the module. */
+	struct can_config config_can;
+	can_get_config_defaults(&config_can);
+	can_init(can_instance, CAN_MODULE, &config_can);
+	can_enable_fd_mode(can_instance);
+	can_start(can_instance);
+	/* Enable interrupts for this CAN module */
+	system_interrupt_enable(SYSTEM_INTERRUPT_MODULE_CAN0);
+	can_enable_interrupt(can_instance, CAN_PROTOCOL_ERROR_ARBITRATION
+										| CAN_PROTOCOL_ERROR_DATA);
 }

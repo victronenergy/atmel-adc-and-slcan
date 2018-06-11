@@ -2,17 +2,42 @@
 // Created by stekreis on 25.05.18.
 //
 
+#include "conf_can.h"
+#include "can.h"
+
 #ifndef SAMC_FREERTOS_CAN_TASK_H
 #define SAMC_FREERTOS_CAN_TASK_H
 
-TaskHandle_t vCreateCanTask(usart_module_t *p_usart_instance);
+TaskHandle_t vCreateCanTask(usart_module_t *p_usart_instance);//, struct can_module *can_instance);
 
-//TODO define correct size
-#define CONF_CAN_ELEMENT_DATA_SIZE 100
+/*
+ *
+ * ASF CAN example
+ */
 
+//Define CAN standard filter setting.
+#define CAN_RX_STANDARD_FILTER_INDEX_0    0
+#define CAN_RX_STANDARD_FILTER_INDEX_1    1
+#define CAN_RX_STANDARD_FILTER_ID_0     0x45A
+#define CAN_RX_STANDARD_FILTER_ID_0_BUFFER_INDEX     2
+#define CAN_RX_STANDARD_FILTER_ID_1     0x469
+#define CAN_RX_EXTENDED_FILTER_INDEX_0    0
+#define CAN_RX_EXTENDED_FILTER_INDEX_1    1
+#define CAN_RX_EXTENDED_FILTER_ID_0     0x100000A5
+#define CAN_RX_EXTENDED_FILTER_ID_0_BUFFER_INDEX     1
+#define CAN_RX_EXTENDED_FILTER_ID_1     0x10000096
+
+// Define CAN standard transfer message setting.
+#define CAN_TX_BUFFER_INDEX    0
 static uint8_t tx_message_0[CONF_CAN_ELEMENT_DATA_SIZE];
 static uint8_t tx_message_1[CONF_CAN_ELEMENT_DATA_SIZE];
 
+// Define CAN standard receive message setting.
+static volatile uint32_t standard_receive_index = 0;
+static volatile uint32_t extended_receive_index = 0;
+static struct can_rx_element_fifo_0 rx_element_fifo_0;
+static struct can_rx_element_fifo_1 rx_element_fifo_1;
+static struct can_rx_element_buffer rx_element_buffer;
 
 #define HW_VER        0x30		// hardware version
 #define SW_VER        0x40		// software version
@@ -67,6 +92,7 @@ static uint8_t tx_message_1[CONF_CAN_ELEMENT_DATA_SIZE];
 // calculate timer0 overflow value
 #define OCR_VALUE ((unsigned char)((unsigned long)(TIME_STAMP_TICK) / (1000000L / (float)((unsigned long)F_CPU / 64L))))
 
+/*
 // CAN tx message
 extern struct {
 	uint8_t format;		// Extended/Standard Frame
@@ -84,6 +110,7 @@ extern struct {
 	uint8_t data[8];		// Data Bytes
 } CAN_rx_msg;			      // length 15 byte/each
 
+
 // CAN init values
 extern struct {
 	uint8_t acr[4];
@@ -92,7 +119,7 @@ extern struct {
 	uint8_t btr1;
 	uint8_t fixed_rate;
 } CAN_init_val;
-
+*/
 extern volatile uint16_t CAN_flags;
 extern volatile uint8_t last_ecr;
 extern volatile uint8_t last_alc;

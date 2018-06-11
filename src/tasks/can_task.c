@@ -7,6 +7,7 @@
 #include "can_task.h"
 #include "usb.h"
 #include <ctype.h>
+#include <can.h>
 
 #define PeliCANMode
 
@@ -14,7 +15,7 @@
 
 #define SETBIT(x, y) (x |= (y))    // Set bit y in byte x
 #define CLEARBIT(x, y) (x &= (~y))    // Clear bit y in byte x
-#define CHECKBIT(x, y) (false)
+#define CHECKBIT(x,y) (x & (y))	// Check bit y in byte x
 
 // define local CAN status flags
 #define CAN_INIT          0x0001    // set if CAN controller is initalized
@@ -50,9 +51,55 @@
 #define RM_RR_Bit   0        /* reset mode (request) bit */
 
 
+#define BTR0_100k 0x43
+#define BTR1_100k 0x2F
 
 // TODO END
 
+
+//TODO not use globally
+usart_module_t *usart_instance;
+
+uint8_t uart_rx_buffer[UART_RX_BUFSIZE];
+
+// CAN module, necessary to be global for CAN interrupt
+// TODO make sure this does not mix up the respective CAN channels
+struct can_module *can_instance_glbl;
+
+// CAN init values for ACR, AMR and BTR registers after power up
+struct {
+	uint8_t acr[4];
+	uint8_t amr[4];
+	uint8_t btr0;
+	uint8_t btr1;
+	uint8_t fixed_rate;
+} CAN_init_val = { {0x00, 0x00, 0x00, 0x00}, {0xff, 0xff, 0xff, 0xff}, BTR0_100k, BTR1_100k, 0};
+
+// CAN tx message
+struct {
+	uint8_t format;		// Extended/Standard Frame
+	uint32_t id;		    // Frame ID
+	uint8_t rtr;		    // RTR/Data Frame
+	uint8_t len;		    // Data Length
+	uint8_t data[8];		// Data Bytes
+} CAN_tx_msg;			    // length 15 byte
+
+// CAN rx message
+struct {
+	uint8_t format;		// Extended/Standard Frame
+	uint32_t id;		    // Frame ID
+	uint8_t rtr;		    // RTR/Data Frame
+	uint8_t len;		    // Data Length
+	uint8_t data[8];		// Data Bytes
+} CAN_rx_msg;			      // length 15 byte/each
+
+
+volatile uint16_t CAN_flags;
+volatile uint8_t last_ecr;
+volatile uint8_t last_alc;
+
+
+uint8_t data[8] = {0x01};
 
 /*
  * Prototypes
@@ -69,18 +116,17 @@ void configure_usart_callbacks(void);
 
 uint8_t exec_usb_cmd(uint8_t *cmd_buf);
 
-usart_module_t *usart_instance;
+static void can_send_standard_message(struct can_module *const can_instance, uint32_t id_value, uint8_t *data);
 
-uint8_t uart_rx_buffer[UART_RX_BUFSIZE];
-uint8_t string[] = "ohlala\r\n";
 
 uint8_t init_CAN(void);
 
-uint8_t transmit_CAN(void);
+uint8_t transmit_CAN(struct can_module *const can_instance, uint32_t id_value, uint8_t *data);
 
 uint8_t read_CAN_reg(uint8_t reg);
 
 void write_CAN_reg(uint8_t cmd_len, uint8_t tmp_regdata);
+
 
 // TODO implement
 uint8_t init_CAN(void) {
@@ -90,10 +136,14 @@ uint8_t init_CAN(void) {
 	return CR;
 }
 
-uint8_t transmit_CAN(void) {
-	return 0;
+uint8_t transmit_CAN(struct can_module *const can_instance, uint32_t id_value, uint8_t *data) {
+	ulog_s("TRANSMIT_CAN");
+	can_send_standard_message(can_instance,id_value,data);
+	return CR;
 }
 
+//TODO implement.
+// original: read register content from SJA1000
 uint8_t read_CAN_reg(uint8_t reg) {
 	return 0;
 }
@@ -105,8 +155,107 @@ void write_CAN_reg(uint8_t cmd_len, uint8_t tmp_regdata) {
 
 
 
+static void can_send_standard_message(struct can_module *const can_instance, uint32_t id_value, uint8_t *data)
+{
+	ulog_s("sending message via CAN");
+	uint32_t i;
+	struct can_tx_element tx_element;
+	can_get_tx_buffer_element_defaults(&tx_element);
+	tx_element.T0.reg |= CAN_TX_ELEMENT_T0_STANDARD_ID(id_value);
+	tx_element.T1.bit.DLC = 8;
+	for (i = 0; i < 8; i++) {
+		tx_element.data[i] = *data;
+		data++;
+	}
+	can_set_tx_buffer_element(can_instance, &tx_element,
+							  CAN_TX_BUFFER_INDEX);
+	can_tx_transfer_request(can_instance, 1 << CAN_TX_BUFFER_INDEX);
+}
+static void can_fd_send_standard_message(struct can_module *const can_instance, uint32_t id_value, uint8_t *data)
+{
+	uint32_t i;
+	struct can_tx_element tx_element;
+	can_get_tx_buffer_element_defaults(&tx_element);
+	tx_element.T0.reg |= CAN_TX_ELEMENT_T0_STANDARD_ID(id_value);
+	tx_element.T1.reg = CAN_TX_ELEMENT_T1_FDF | CAN_TX_ELEMENT_T1_BRS |
+						CAN_TX_ELEMENT_T1_DLC(CAN_TX_ELEMENT_T1_DLC_DATA64_Val);
+	for (i = 0; i < CONF_CAN_ELEMENT_DATA_SIZE; i++) {
+		tx_element.data[i] = *data;
+		data++;
+	}
+	can_set_tx_buffer_element(can_instance, &tx_element,
+							  CAN_TX_BUFFER_INDEX);
+	can_tx_transfer_request(can_instance, 1 << CAN_TX_BUFFER_INDEX);
+}
+static void can_fd_send_extended_message(struct can_module *const can_instance, uint32_t id_value, uint8_t *data)
+{
+	uint32_t i;
+	struct can_tx_element tx_element;
+	can_get_tx_buffer_element_defaults(&tx_element);
+	tx_element.T0.reg |= CAN_TX_ELEMENT_T0_EXTENDED_ID(id_value) |
+						 CAN_TX_ELEMENT_T0_XTD;
+	tx_element.T1.reg = CAN_TX_ELEMENT_T1_EFC | CAN_TX_ELEMENT_T1_FDF |
+						CAN_TX_ELEMENT_T1_BRS |
+						CAN_TX_ELEMENT_T1_DLC(CAN_TX_ELEMENT_T1_DLC_DATA64_Val);
+	for (i = 0; i < CONF_CAN_ELEMENT_DATA_SIZE; i++) {
+		tx_element.data[i] = *data;
+		data++;
+	}
+	can_set_tx_buffer_element(can_instance, &tx_element,
+							  CAN_TX_BUFFER_INDEX);
+	can_tx_transfer_request(can_instance, 1 << CAN_TX_BUFFER_INDEX);
+}
+
+
+
+static void can_set_standard_filter_0(struct can_module *const can_instance)
+{
+	struct can_standard_message_filter_element sd_filter;
+	can_get_standard_message_filter_element_default(&sd_filter);
+	sd_filter.S0.bit.SFID2 = CAN_RX_STANDARD_FILTER_ID_0_BUFFER_INDEX;
+	sd_filter.S0.bit.SFID1 = CAN_RX_STANDARD_FILTER_ID_0;
+	sd_filter.S0.bit.SFEC =
+			CAN_STANDARD_MESSAGE_FILTER_ELEMENT_S0_SFEC_STRXBUF_Val;
+	can_set_rx_standard_filter(can_instance, &sd_filter,
+							   CAN_RX_STANDARD_FILTER_INDEX_0);
+	can_enable_interrupt(can_instance, CAN_RX_BUFFER_NEW_MESSAGE);
+}
+static void can_set_standard_filter_1(struct can_module *const can_instance)
+{
+	struct can_standard_message_filter_element sd_filter;
+	can_get_standard_message_filter_element_default(&sd_filter);
+	sd_filter.S0.bit.SFID1 = CAN_RX_STANDARD_FILTER_ID_1;
+	can_set_rx_standard_filter(can_instance, &sd_filter,
+							   CAN_RX_STANDARD_FILTER_INDEX_1);
+	can_enable_interrupt(can_instance, CAN_RX_FIFO_0_NEW_MESSAGE);
+}
+static void can_set_extended_filter_0(struct can_module *const can_instance)
+{
+	struct can_extended_message_filter_element et_filter;
+	can_get_extended_message_filter_element_default(&et_filter);
+	et_filter.F0.bit.EFID1 = CAN_RX_EXTENDED_FILTER_ID_0;
+	et_filter.F0.bit.EFEC =
+			CAN_EXTENDED_MESSAGE_FILTER_ELEMENT_F0_EFEC_STRXBUF_Val;
+	et_filter.F1.bit.EFID2 = CAN_RX_EXTENDED_FILTER_ID_0_BUFFER_INDEX;
+	can_set_rx_extended_filter(can_instance, &et_filter,
+							   CAN_RX_EXTENDED_FILTER_INDEX_0);
+	can_enable_interrupt(can_instance, CAN_RX_BUFFER_NEW_MESSAGE);
+}
+static void can_set_extended_filter_1(struct can_module *const can_instance)
+{
+	struct can_extended_message_filter_element et_filter;
+	can_get_extended_message_filter_element_default(&et_filter);
+	et_filter.F0.bit.EFID1 = CAN_RX_EXTENDED_FILTER_ID_1;
+	can_set_rx_extended_filter(can_instance, &et_filter,
+							   CAN_RX_EXTENDED_FILTER_INDEX_1);
+	can_enable_interrupt(can_instance, CAN_RX_FIFO_1_NEW_MESSAGE);
+}
+
+
+
 void usart_read_callback(struct usart_module *const usart_module) {
-	usart_write_buffer_job(usart_instance, (uint8_t *) string, sizeof(string));
+	char *string = "read callback";
+	usart_write_buffer_job(usart_instance, (uint8_t *) string, strlen(string));
 	//usart_write_buffer_job(usart_instance, (uint8_t *)uart_rx_buffer, UART_RX_BUFSIZE);
 	//port_pin_toggle_output_level(LED_0_PIN);
 
@@ -134,20 +283,26 @@ void configure_usart_callbacks(void) {
 void vCanTask(void *pvParameters) {
 	ulog_s("cantask begin loop\r\n");
 
-	vTaskDelay((const TickType_t) 100);
+	vTaskDelay((const TickType_t) 1000);
 
 	uint8_t usb_rx_char;
 
 	uint8_t cmd_buf[CMD_BUFFER_LENGTH];
 	uint8_t buf_ind = 0;
 
-	uint8_t init_CAN(void);
+	uint8_t i;
 
-		init_can_mem();
+	init_CAN();
+
+	init_can_mem();
 
 	configure_usart_callbacks();
 
 	//TODO prepare CAN interface
+
+
+	can_set_standard_filter_0(can_instance_glbl);
+
 
 	for (;;) {
 		vTaskDelay((const TickType_t) 1000);
@@ -155,62 +310,63 @@ void vCanTask(void *pvParameters) {
 
 		// TODO perform CAN task
 
-		ulog_s("testing\r\n");
-
 		//usart_read_buffer_wait(usart_instance, uart_rx_buffer, 1);
 
 		//uint8_t string[] = "senddatatopc\r\n";
 		//usart_write_buffer_wait(usart_instance, string, sizeof(string));
 
-		/*
+
 		if (CHECKBIT(CAN_flags, MSG_WAITING)) {
 			// check frame format
 			if (!CAN_rx_msg.format) {    // Standart Frame
 				if (!CAN_rx_msg.rtr) {
-					usb_putc(SEND_11BIT_ID);
+					usb_putc(usart_instance, SEND_11BIT_ID);
 				}        // send command tag
 				else {
-					usb_putc(SEND_R11BIT_ID);
+					usb_putc(usart_instance, SEND_R11BIT_ID);
 				}
 
 				// send high byte of ID
 				if (((CAN_rx_msg.id >> 8) & 0x0F) < 10)
-					usb_putc(((uint8_t) (CAN_rx_msg.id >> 8) & 0x0F) + 48);
+					usb_putc(usart_instance, (uint8_t) (((CAN_rx_msg.id >> 8) & 0x0F) + 48));
 				else
-					usb_putc(((uint8_t) (CAN_rx_msg.id >> 8) & 0x0F) + 55);
+					usb_putc(usart_instance, (uint8_t) (((CAN_rx_msg.id >> 8) & 0x0F) + 55));
 				// send low byte of ID
-				usb_byte2ascii((uint8_t) CAN_rx_msg.id & 0xFF);
+				usb_byte2ascii(usart_instance, (uint8_t) (CAN_rx_msg.id & 0xFF));
 			} else {        // Extented Frame
 				if (!CAN_rx_msg.rtr) {
-					usb_putc(SEND_29BIT_ID);
+					usb_putc(usart_instance, SEND_29BIT_ID);
 				}        // send command tag
 				else {
-					usb_putc(SEND_R29BIT_ID);
+					usb_putc(usart_instance, SEND_R29BIT_ID);
 				}
 				// send ID bytes
-				usb_byte2ascii((uint8_t) (CAN_rx_msg.id >> 24) & 0xFF);
-				usb_byte2ascii((uint8_t) (CAN_rx_msg.id >> 16) & 0xFF);
-				usb_byte2ascii((uint8_t) (CAN_rx_msg.id >> 8) & 0xFF);
-				usb_byte2ascii((uint8_t) CAN_rx_msg.id & 0xFF);
+				usb_byte2ascii(usart_instance, (uint8_t) ((CAN_rx_msg.id >> 24) & 0xFF));
+				usb_byte2ascii(usart_instance, (uint8_t) ((CAN_rx_msg.id >> 16) & 0xFF));
+				usb_byte2ascii(usart_instance, (uint8_t) ((CAN_rx_msg.id >> 8) & 0xFF));
+				usb_byte2ascii(usart_instance, (uint8_t) (CAN_rx_msg.id & 0xFF));
 			}
 			// send data length code
-			usb_putc(CAN_rx_msg.len + '0');
+			usb_putc(usart_instance, (uint8_t) (CAN_rx_msg.len + '0'));
 			if (!CAN_rx_msg.rtr) {    // send data only if no remote frame request
 				// send data bytes
 				for (i = 0; i < CAN_rx_msg.len; i++)
-					usb_byte2ascii(CAN_rx_msg.data[i]);
+					usb_byte2ascii(usart_instance, CAN_rx_msg.data[i]);
 			}
+			/*	TODO clarify: TIMESTAMP required at all?
 			// send time stamp if required
 			if (ram_timestamp_status != 0) {
 				usb_byte2ascii((uint8_t) (timestamp >> 8));
 				usb_byte2ascii((uint8_t) timestamp);
 			}
+			 */
 			// send end tag
-			usb_putc(CR);
+			usb_putc(usart_instance, CR);
 			CLEARBIT(CAN_flags, MSG_WAITING);
-		}*/
+		}
 
 		xlog(uart_rx_buffer, UART_RX_BUFSIZE);
+		ulog_s("\r\n");
 		// read char from USB
 		usb_rx_char = usb_getc(usart_instance, uart_rx_buffer);    // check for new chars from USB
 		if (usb_rx_char == CR)    // check for end of command
@@ -237,8 +393,6 @@ void vCanTask(void *pvParameters) {
 
 
 uint8_t exec_usb_cmd(uint8_t *cmd_buf) {
-
-
 	ulog_s("EXEC USB CMD\r\n");
 
 	uint8_t cmd_len = strlen((char *) cmd_buf);    // get command length
@@ -266,6 +420,7 @@ uint8_t exec_usb_cmd(uint8_t *cmd_buf) {
 
 			// get hard- and software version
 		case GET_VERSION:
+			ulog_s("request version");
 			usb_putc(usart_instance, GET_VERSION);
 			usb_byte2ascii(usart_instance, HW_VER);
 			usb_byte2ascii(usart_instance, SW_VER);
@@ -273,6 +428,7 @@ uint8_t exec_usb_cmd(uint8_t *cmd_buf) {
 
 			// get only software version
 		case GET_SW_VERSION:
+			ulog_s("request sw version");
 			usb_putc(usart_instance, GET_SW_VERSION);
 			usb_byte2ascii(usart_instance, SW_VER_MAJOR);
 			usb_byte2ascii(usart_instance, SW_VER_MINOR);
@@ -281,6 +437,7 @@ uint8_t exec_usb_cmd(uint8_t *cmd_buf) {
  * TODO clarify if actually needed
 			// toggle time stamp option
 		case TIME_STAMP:
+			ulog_s("toggle time stamp option");
 			// read stored status
 			ram_timestamp_status = eeprom_read_byte(&ee_timestamp_status);
 			// toggle status
@@ -296,6 +453,7 @@ uint8_t exec_usb_cmd(uint8_t *cmd_buf) {
 */
 			// read status flag
 		case READ_STATUS:
+			ulog_s("request status flag");
 			// check if CAN controller is in reset mode
 			if (!CHECKBIT(CAN_flags, BUS_ON))
 				return ERROR;
@@ -308,7 +466,7 @@ uint8_t exec_usb_cmd(uint8_t *cmd_buf) {
 			ulog_s("bus error indication turned off.\r\n");
 
 			// reset error flags
-			// TODO replace: CAN_flags &= 0x00FF;
+			CAN_flags &= 0x00FF;
 			ulog_s("error flags were reset.\r\n");
 			return CR;
 
@@ -316,6 +474,7 @@ uint8_t exec_usb_cmd(uint8_t *cmd_buf) {
 		case SET_AMR:
 			// set ACR
 		case SET_ACR:
+			ulog_s("set AMR/ACR");
 			// check valid cmd length and if CAN was initialized before
 			if (cmd_len != 9)
 				return ERROR;
@@ -349,12 +508,21 @@ uint8_t exec_usb_cmd(uint8_t *cmd_buf) {
 		case SET_BTR:
 			// set fix bitrate
 		case SET_BITRATE:
-			if ((cmd_len != 5) && (cmd_len != 2))
-				return ERROR;    // check valid cmd length
 
+			//TODO remove these 2 cmds, used for testing only
+			*(cmd_buf_pntr+1) = 5;
+			cmd_len = 2;
+
+			ulog_s("set bitrate");
+			if ((cmd_len != 5) && (cmd_len != 2)) {
+				ulog_s("invalid cmd length");
+				return ERROR;    // check valid cmd length
+			}
 			// check if CAN controller is in reset mode
-			if (CHECKBIT(CAN_flags, BUS_ON))
+			if (CHECKBIT(CAN_flags, BUS_ON)) {
+				ulog_s("controller is in reset");
 				return ERROR;
+			}
 
 			// store user or fixed bit rate
 			if (*cmd_buf_pntr == SET_BTR) {
@@ -374,14 +542,20 @@ uint8_t exec_usb_cmd(uint8_t *cmd_buf) {
 
 			// open CAN channel
 		case OPEN_CAN_CHAN:
+			ulog_s("open CAN channel");
 			// return error if controller is not initialized or already open
-			if (!CHECKBIT(CAN_flags, CAN_INIT))
+			if (!CHECKBIT(CAN_flags, CAN_INIT)) {
+				ulog_s("controller not initialized or already open");
 				return ERROR;
+			}
 
 			// check if CAN controller is in reset mode
-			if (CHECKBIT(CAN_flags, BUS_ON))
+			if (CHECKBIT(CAN_flags, BUS_ON)){
+				ulog_s("controller in reset mode");
 				return ERROR;
+			}
 
+/* TODO comment in
 			// switch to oper mode
 			do {
 #if defined(ENABLE_SELFTEST)
@@ -390,11 +564,13 @@ uint8_t exec_usb_cmd(uint8_t *cmd_buf) {
 				ModeControlReg &= ~_BV(RM_RR_Bit);
 #endif
 			} while ((ModeControlReg & _BV(RM_RR_Bit)) == _BV(RM_RR_Bit));
+			*/
 			SETBIT(CAN_flags, BUS_ON);
 			return CR;
 
 			// close CAN channel
 		case CLOSE_CAN_CHAN:
+			ulog_s("close CAN channel");
 			// check if CAN controller is in reset mode
 			if (!CHECKBIT(CAN_flags, BUS_ON))
 				return ERROR;
@@ -410,8 +586,9 @@ uint8_t exec_usb_cmd(uint8_t *cmd_buf) {
 			CLEARBIT(CAN_flags, BUS_ON);
 			return CR;
 
-			// send 11bit ID message
+			// send R11bit ID message
 		case SEND_R11BIT_ID:
+			ulog_s("send 11bit ID message");
 			// check if CAN controller is in reset mode or busy
 			if (!CHECKBIT(CAN_flags, BUS_ON) || CHECKBIT(CAN_flags, TX_BUSY))
 				return ERROR;
@@ -433,15 +610,22 @@ uint8_t exec_usb_cmd(uint8_t *cmd_buf) {
 			CAN_tx_msg.len = ascii2byte(++cmd_buf_pntr);
 
 			// if transmit buffer was empty send message
-			return transmit_CAN();
+
+			return transmit_CAN(can_instance_glbl, CAN_RX_STANDARD_FILTER_ID_0, CAN_tx_msg.data);
 
 		case SEND_11BIT_ID:
+			ulog_s("send 11bit ID message");
 			// check if CAN controller is in reset mode or busy
-			if (!CHECKBIT(CAN_flags, BUS_ON) || CHECKBIT(CAN_flags, TX_BUSY))
+			if (!CHECKBIT(CAN_flags, BUS_ON) || CHECKBIT(CAN_flags, TX_BUSY)) {
+				xlog(&CAN_flags,2);
+				ulog_s("CAN controller in reset mode or busy");
 				return ERROR;
+			}
 
-			if ((cmd_len < 5) || (cmd_len > 21))
+			if ((cmd_len < 5) || (cmd_len > 21)) {
+				ulog_s("invalid cmd length");
 				return ERROR;    // check valid cmd length
+			}
 
 			CAN_tx_msg.rtr = 0;    // no remote transmission request
 
@@ -472,11 +656,13 @@ uint8_t exec_usb_cmd(uint8_t *cmd_buf) {
 					CAN_tx_msg.data[cmd_len] += ascii2byte(cmd_buf_pntr);
 				}
 			}
+			ulog_s("sending trending pending");
 			// if transmit buffer was empty send message
-			return transmit_CAN();
+			return transmit_CAN(can_instance_glbl, CAN_RX_STANDARD_FILTER_ID_0, CAN_tx_msg.data);
 
 			// send 29bit ID message
 		case SEND_R29BIT_ID:
+			ulog_s("send R29bit ID message");
 			// check if CAN controller is in reset mode or busy
 			if (!CHECKBIT(CAN_flags, BUS_ON) || CHECKBIT(CAN_flags, TX_BUSY))
 				return ERROR;
@@ -507,9 +693,10 @@ uint8_t exec_usb_cmd(uint8_t *cmd_buf) {
 			// store data length
 			CAN_tx_msg.len = ascii2byte(++cmd_buf_pntr);
 			// if transmit buffer was empty send message
-			return transmit_CAN();
+			return transmit_CAN(can_instance_glbl, CAN_RX_STANDARD_FILTER_ID_0, CAN_tx_msg.data);
 
 		case SEND_29BIT_ID:
+			ulog_s("send 29bit ID message");
 			// check if CAN controller is in reset mode or busy
 			if (!CHECKBIT(CAN_flags, BUS_ON) || CHECKBIT(CAN_flags, TX_BUSY))
 				return ERROR;
@@ -557,12 +744,13 @@ uint8_t exec_usb_cmd(uint8_t *cmd_buf) {
 				}
 			}
 			// if transmit buffer was empty send message
-			return transmit_CAN();
+			return transmit_CAN(can_instance_glbl, CAN_RX_STANDARD_FILTER_ID_0, CAN_tx_msg.data);
 
 			// read Error Capture Register
 			// read Arbitration Lost Register
 		case READ_ECR:
 		case READ_ALCR:
+			ulog_s("read ECR/ALCR");
 			// check if CAN controller is in reset mode
 			if (!CHECKBIT(CAN_flags, BUS_ON))
 				return ERROR;
@@ -578,6 +766,7 @@ uint8_t exec_usb_cmd(uint8_t *cmd_buf) {
 
 			// read SJA1000 register
 		case READ_REG:
+			ulog_s("read SJA1000 register");
 			if (cmd_len != 3)
 				return ERROR;    // check valid cmd length
 			// cmd_len is no longer needed, so we can use it as buffer
@@ -591,6 +780,7 @@ uint8_t exec_usb_cmd(uint8_t *cmd_buf) {
 
 			// write SJA1000 register
 		case WRITE_REG:
+			ulog_s("write SJA1000 register");
 			if (cmd_len != 5)
 				return ERROR;    // check valid cmd length
 
@@ -607,6 +797,7 @@ uint8_t exec_usb_cmd(uint8_t *cmd_buf) {
 			return CR;
 
 		case LISTEN_ONLY:
+			ulog_s("listen only mode");
 			// return error if controller is not initialized or already open
 			if (!CHECKBIT(CAN_flags, CAN_INIT))
 				return ERROR;
@@ -622,8 +813,17 @@ uint8_t exec_usb_cmd(uint8_t *cmd_buf) {
 			SETBIT(CAN_flags, BUS_ON);
 			return CR;
 
+			//TODO remove the following case
+		case 'Q':
+			ulog_s("Q testing case");
+			can_send_standard_message(can_instance_glbl, CAN_RX_STANDARD_FILTER_ID_0, data);
+
+
+			return CR;
+
 			// end with error on unknown commands
 		default:
+			ulog_s("unknown command");
 			return ERROR;
 	}                // end switch
 
@@ -641,9 +841,88 @@ void init_can_mem() {
 	}
 }
 
-TaskHandle_t vCreateCanTask(usart_module_t *p_usart_instance) {
+
+void CAN0_Handler(void)
+{
+	ulog_s("CAN Handler was called\r\n");
+	volatile uint32_t status, i, rx_buffer_index;
+	status = can_read_interrupt_status(can_instance_glbl);
+	if (status & CAN_RX_BUFFER_NEW_MESSAGE) {
+		can_clear_interrupt_status(can_instance_glbl, CAN_RX_BUFFER_NEW_MESSAGE);
+		for (i = 0; i < CONF_CAN0_RX_BUFFER_NUM; i++) {
+			if (can_rx_get_buffer_status(can_instance_glbl, i)) {
+				rx_buffer_index = i;
+				can_rx_clear_buffer_status(can_instance_glbl, i);
+				can_get_rx_buffer_element(can_instance_glbl, &rx_element_buffer,
+										  rx_buffer_index);
+				if (rx_element_buffer.R0.bit.XTD) {
+					ulog_s("\n\r Extended FD message received in Rx buffer. The received data is: \r\n");
+				} else {
+					ulog_s("\n\r Standard FD message received in Rx buffer. The received data is: \r\n");
+				}
+				//for (i = 0; i < CONF_CAN_ELEMENT_DATA_SIZE; i++) {
+				//	printf("  %d",rx_element_buffer.data[i]);
+				//}
+				xlog(rx_element_buffer.data,CONF_CAN_ELEMENT_DATA_SIZE);
+				ulog_s("\r\n\r\n");
+			}
+		}
+	}
+	if (status & CAN_RX_FIFO_0_NEW_MESSAGE) {
+		can_clear_interrupt_status(can_instance_glbl, CAN_RX_FIFO_0_NEW_MESSAGE);
+		can_get_rx_fifo_0_element(can_instance_glbl, &rx_element_fifo_0,
+								  standard_receive_index);
+		can_rx_fifo_acknowledge(can_instance_glbl, 0,
+								standard_receive_index);
+		standard_receive_index++;
+		if (standard_receive_index == CONF_CAN0_RX_FIFO_0_NUM) {
+			standard_receive_index = 0;
+		}
+		if (rx_element_fifo_0.R1.bit.FDF) {
+			ulog_s("\n\r Standard FD message received in FIFO 0. The received data is: \r\n");
+			//for (i = 0; i < CONF_CAN_ELEMENT_DATA_SIZE; i++) {
+			//	printf("  %d",rx_element_fifo_0.data[i]);
+			//}
+			xlog(rx_element_fifo_0.data, CONF_CAN_ELEMENT_DATA_SIZE);
+		} else {
+			ulog_s("\n\r Standard normal message received in FIFO 0. The received data is: \r\n");
+			//for (i = 0; i < rx_element_fifo_0.R1.bit.DLC; i++) {
+			//	printf("  %d",rx_element_fifo_0.data[i]);
+			//}
+			xlog(rx_element_fifo_0.data,(uint8_t) (rx_element_fifo_0.R1.bit.DLC));
+		}
+		ulog_s("\r\n\r\n");
+	}
+	if (status & CAN_RX_FIFO_1_NEW_MESSAGE) {
+		can_clear_interrupt_status(can_instance_glbl, CAN_RX_FIFO_1_NEW_MESSAGE);
+		can_get_rx_fifo_1_element(can_instance_glbl, &rx_element_fifo_1,
+								  extended_receive_index);
+		can_rx_fifo_acknowledge(can_instance_glbl, 0,
+								extended_receive_index);
+		extended_receive_index++;
+		if (extended_receive_index == CONF_CAN0_RX_FIFO_1_NUM) {
+			extended_receive_index = 0;
+		}
+		ulog_s("\n\r Extended FD message received in FIFO 1. The received data is: \r\n");
+		//for (i = 0; i < CONF_CAN_ELEMENT_DATA_SIZE; i++) {
+		//	printf("  %d",rx_element_fifo_1.data[i]);
+		//}
+		xlog(rx_element_fifo_1.data, CONF_CAN_ELEMENT_DATA_SIZE);
+		ulog_s("\r\n\r\n");
+	}
+	if ((status & CAN_PROTOCOL_ERROR_ARBITRATION)
+		|| (status & CAN_PROTOCOL_ERROR_DATA)) {
+		can_clear_interrupt_status(can_instance_glbl, CAN_PROTOCOL_ERROR_ARBITRATION
+												  | CAN_PROTOCOL_ERROR_DATA);
+		ulog_s("Protocol error, please double check the clock in two boards. \r\n\r\n");
+	}
+}
+
+
+TaskHandle_t vCreateCanTask(usart_module_t *p_usart_instance){ //}, struct can_module *p_can_instance) {
 
 	usart_instance = p_usart_instance;
+	//can_instance_glbl = p_can_instance;
 
 	ulog_s("creating CAN Task...\r\n");
 
@@ -671,3 +950,4 @@ TaskHandle_t vCreateCanTask(usart_module_t *p_usart_instance) {
 
 
 }
+
