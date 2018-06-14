@@ -223,7 +223,7 @@ void vCanTask(void *pvParameters) {
 	can_enable_interrupt(can_instance_glbl, CAN_RX_FIFO_1_NEW_MESSAGE);
 
 	for (;;) {
-		vTaskDelay((const TickType_t) 500);
+		vTaskDelay((const TickType_t) 100);
 		//port_pin_toggle_output_level(LED_0_PIN);
 
 		// TODO perform CAN task
@@ -235,6 +235,15 @@ void vCanTask(void *pvParameters) {
 
 		if (CHECKBIT(CAN_flags, MSG_WAITING)) {
 			ulog_s("data received");
+/*
+			volatile uint32_t status, rx_buffer_index;
+			status = can_read_interrupt_status(can_instance_glbl);
+			if (status & CAN_RX_FIFO_1_NEW_MESSAGE) {
+				can_clear_interrupt_status(can_instance_glbl, CAN_RX_FIFO_1_NEW_MESSAGE);
+				ulog_s("somesing");
+			}
+*/
+
 			// check frame format
 			if (!CAN_rx_msg.format) {    // Standart Frame
 				if (!CAN_rx_msg.rtr) {
@@ -767,10 +776,9 @@ void CAN0_Handler(void) {
 
 	SETBIT(CAN_flags, MSG_WAITING);
 
-	volatile uint32_t status, i, rx_buffer_index;
+	volatile uint32_t status, rx_buffer_index;
 	status = can_read_interrupt_status(can_instance_glbl);
 	if (status & CAN_RX_FIFO_0_NEW_MESSAGE) {
-		port_pin_set_output_level(LED0_PIN, LED0_INACTIVE);
 		can_clear_interrupt_status(can_instance_glbl, CAN_RX_FIFO_0_NEW_MESSAGE);
 		can_get_rx_fifo_0_element(can_instance_glbl, &rx_element_fifo_0,
 								  standard_receive_index);
@@ -780,23 +788,11 @@ void CAN0_Handler(void) {
 		if (standard_receive_index == CONF_CAN0_RX_FIFO_0_NUM) {
 			standard_receive_index = 0;
 		}
-		if (rx_element_fifo_0.R1.bit.FDF) {
-			ulog_s("\n\r Standard FD message received in FIFO 0. The received data is: \r\n");
-			//for (i = 0; i < CONF_CAN_ELEMENT_DATA_SIZE; i++) {
-			//	printf("  %d",rx_element_fifo_0.data[i]);
-			//}
-			xlog(rx_element_fifo_0.data, CONF_CAN_ELEMENT_DATA_SIZE);
-		} else {
-			ulog_s("\n\r Standard normal message received in FIFO 0. The received data is: \r\n");
-			//for (i = 0; i < rx_element_fifo_0.R1.bit.DLC; i++) {
-			//	printf("  %d",rx_element_fifo_0.data[i]);
-			//}
-			xlog(rx_element_fifo_0.data, (uint8_t) (rx_element_fifo_0.R1.bit.DLC));
-		}
+		ulog_s("\n\r Standard message received in FIFO 0. The received data is: \r\n");
+		xlog(rx_element_fifo_0.data, (uint8_t) (rx_element_fifo_0.R1.bit.DLC));
 		ulog_s("\r\n\r\n");
 	}
 	if (status & CAN_RX_FIFO_1_NEW_MESSAGE) {
-		port_pin_set_output_level(LED0_PIN, LED0_INACTIVE);
 		can_clear_interrupt_status(can_instance_glbl, CAN_RX_FIFO_1_NEW_MESSAGE);
 		can_get_rx_fifo_1_element(can_instance_glbl, &rx_element_fifo_1,
 								  extended_receive_index);
@@ -806,19 +802,17 @@ void CAN0_Handler(void) {
 		if (extended_receive_index == CONF_CAN0_RX_FIFO_1_NUM) {
 			extended_receive_index = 0;
 		}
-		ulog_s("\n\r Extended FD message received in FIFO 1. The received data is: \r\n");
-		//for (i = 0; i < CONF_CAN_ELEMENT_DATA_SIZE; i++) {
-		//	printf("  %d",rx_element_fifo_1.data[i]);
-		//}
-		xlog(rx_element_fifo_1.data, CONF_CAN_ELEMENT_DATA_SIZE);
+		ulog_s("\n\r Extended message received in FIFO 1. The received data is: \r\n");
+		xlog(rx_element_fifo_1.data, (uint8_t) (rx_element_fifo_1.R1.bit.DLC));
 		ulog_s("\r\n\r\n");
 	}
 	if ((status & CAN_PROTOCOL_ERROR_ARBITRATION)
 		|| (status & CAN_PROTOCOL_ERROR_DATA)) {
 		can_clear_interrupt_status(can_instance_glbl, CAN_PROTOCOL_ERROR_ARBITRATION
-													  | CAN_PROTOCOL_ERROR_DATA);
+												  | CAN_PROTOCOL_ERROR_DATA);
 		ulog_s("Protocol error, please double check the clock in two boards. \r\n\r\n");
 	}
+
 }
 
 
