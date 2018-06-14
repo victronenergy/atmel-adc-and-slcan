@@ -7,7 +7,6 @@
 #include "can_task.h"
 #include "usb.h"
 #include <ctype.h>
-#include <can.h>
 
 #define PeliCANMode
 
@@ -15,7 +14,7 @@
 
 #define SETBIT(x, y) (x |= (y))    // Set bit y in byte x
 #define CLEARBIT(x, y) (x &= (~y))    // Clear bit y in byte x
-#define CHECKBIT(x,y) (x & (y))	// Check bit y in byte x
+#define CHECKBIT(x, y) (x & (y))    // Check bit y in byte x
 
 // define local CAN status flags
 #define CAN_INIT          0x0001    // set if CAN controller is initalized
@@ -73,25 +72,25 @@ struct {
 	uint8_t btr0;
 	uint8_t btr1;
 	uint8_t fixed_rate;
-} CAN_init_val = { {0x00, 0x00, 0x00, 0x00}, {0xff, 0xff, 0xff, 0xff}, BTR0_100k, BTR1_100k, 0};
+} CAN_init_val = {{0x00, 0x00, 0x00, 0x00}, {0xff, 0xff, 0xff, 0xff}, BTR0_100k, BTR1_100k, 0};
 
 // CAN tx message
 struct {
-	uint8_t format;		// Extended/Standard Frame
-	uint32_t id;		    // Frame ID
-	uint8_t rtr;		    // RTR/Data Frame
-	uint8_t len;		    // Data Length
-	uint8_t data[8];		// Data Bytes
-} CAN_tx_msg;			    // length 15 byte
+	uint8_t format;        // Extended/Standard Frame
+	uint32_t id;            // Frame ID
+	uint8_t rtr;            // RTR/Data Frame
+	uint8_t len;            // Data Length
+	uint8_t data[8];        // Data Bytes
+} CAN_tx_msg;                // length 15 byte
 
 // CAN rx message
 struct {
-	uint8_t format;		// Extended/Standard Frame
-	uint32_t id;		    // Frame ID
-	uint8_t rtr;		    // RTR/Data Frame
-	uint8_t len;		    // Data Length
-	uint8_t data[8];		// Data Bytes
-} CAN_rx_msg;			      // length 15 byte/each
+	uint8_t format;        // Extended/Standard Frame
+	uint32_t id;            // Frame ID
+	uint8_t rtr;            // RTR/Data Frame
+	uint8_t len;            // Data Length
+	uint8_t data[8];        // Data Bytes
+} CAN_rx_msg;                  // length 15 byte/each
 
 
 volatile uint16_t CAN_flags;
@@ -108,20 +107,20 @@ void vCanTask(void *pvParameters);
 
 void init_can_mem(void);
 
-void usart_read_callback(struct usart_module *const usart_module);
+void usart_read_callback(struct usart_module *usart_module);
 
-void usart_write_callback(struct usart_module *const usart_module);
+void usart_write_callback(struct usart_module *usart_module);
 
 void configure_usart_callbacks(void);
 
 uint8_t exec_usb_cmd(uint8_t *cmd_buf);
 
-static void can_send_standard_message(struct can_module *const can_instance, uint32_t id_value, uint8_t *data);
+static void can_send_standard_message(struct can_module *can_instance, uint32_t id_value, uint8_t *data);
 
 
 uint8_t init_CAN_mictronics(void);
 
-uint8_t transmit_CAN(struct can_module *const can_instance, uint32_t id_value, uint8_t *data);
+uint8_t transmit_CAN(struct can_module *can_instance, uint32_t id_value, uint8_t *data);
 
 uint8_t read_CAN_reg(uint8_t reg);
 
@@ -138,7 +137,7 @@ uint8_t init_CAN_mictronics(void) {
 
 uint8_t transmit_CAN(struct can_module *const can_instance, uint32_t id_value, uint8_t *data) {
 	ulog_s("TRANSMIT_CAN");
-	can_send_standard_message(can_instance,id_value,data);
+	can_send_standard_message(can_instance, id_value, data);
 	return CR;
 }
 
@@ -155,8 +154,7 @@ void write_CAN_reg(uint8_t cmd_len, uint8_t tmp_regdata) {
 
 
 
-static void can_send_standard_message(struct can_module *const can_instance, uint32_t id_value, uint8_t *data)
-{
+static void can_send_standard_message(struct can_module *const can_instance, uint32_t id_value, uint8_t *data) {
 	ulog_s("sending message via CAN");
 	uint32_t i;
 	struct can_tx_element tx_element;
@@ -171,87 +169,6 @@ static void can_send_standard_message(struct can_module *const can_instance, uin
 							  CAN_TX_BUFFER_INDEX);
 	can_tx_transfer_request(can_instance, 1 << CAN_TX_BUFFER_INDEX);
 }
-static void can_fd_send_standard_message(struct can_module *const can_instance, uint32_t id_value, uint8_t *data)
-{
-	uint32_t i;
-	struct can_tx_element tx_element;
-	can_get_tx_buffer_element_defaults(&tx_element);
-	tx_element.T0.reg |= CAN_TX_ELEMENT_T0_STANDARD_ID(id_value);
-	tx_element.T1.reg = CAN_TX_ELEMENT_T1_FDF | CAN_TX_ELEMENT_T1_BRS |
-						CAN_TX_ELEMENT_T1_DLC(CAN_TX_ELEMENT_T1_DLC_DATA64_Val);
-	for (i = 0; i < CONF_CAN_ELEMENT_DATA_SIZE; i++) {
-		tx_element.data[i] = *data;
-		data++;
-	}
-	can_set_tx_buffer_element(can_instance, &tx_element,
-							  CAN_TX_BUFFER_INDEX);
-	can_tx_transfer_request(can_instance, 1 << CAN_TX_BUFFER_INDEX);
-}
-static void can_fd_send_extended_message(struct can_module *const can_instance, uint32_t id_value, uint8_t *data)
-{
-	uint32_t i;
-	struct can_tx_element tx_element;
-	can_get_tx_buffer_element_defaults(&tx_element);
-	tx_element.T0.reg |= CAN_TX_ELEMENT_T0_EXTENDED_ID(id_value) |
-						 CAN_TX_ELEMENT_T0_XTD;
-	tx_element.T1.reg = CAN_TX_ELEMENT_T1_EFC | CAN_TX_ELEMENT_T1_FDF |
-						CAN_TX_ELEMENT_T1_BRS |
-						CAN_TX_ELEMENT_T1_DLC(CAN_TX_ELEMENT_T1_DLC_DATA64_Val);
-	for (i = 0; i < CONF_CAN_ELEMENT_DATA_SIZE; i++) {
-		tx_element.data[i] = *data;
-		data++;
-	}
-	can_set_tx_buffer_element(can_instance, &tx_element,
-							  CAN_TX_BUFFER_INDEX);
-	can_tx_transfer_request(can_instance, 1 << CAN_TX_BUFFER_INDEX);
-}
-
-
-
-static void can_set_standard_filter_0(struct can_module *const can_instance)
-{
-	struct can_standard_message_filter_element sd_filter;
-	can_get_standard_message_filter_element_default(&sd_filter);
-	sd_filter.S0.bit.SFID2 = 0;
-	sd_filter.S0.bit.SFID1 = 0;
-	sd_filter.S0.bit.SFEC =
-			CAN_STANDARD_MESSAGE_FILTER_ELEMENT_S0_SFEC_STRXBUF_Val;
-	can_set_rx_standard_filter(can_instance, &sd_filter,
-							   CAN_RX_STANDARD_FILTER_INDEX_0);
-	can_enable_interrupt(can_instance, CAN_RX_BUFFER_NEW_MESSAGE);
-}
-static void can_set_standard_filter_1(struct can_module *const can_instance)
-{
-	struct can_standard_message_filter_element sd_filter;
-	can_get_standard_message_filter_element_default(&sd_filter);
-	sd_filter.S0.bit.SFID1 = CAN_RX_STANDARD_FILTER_ID_1;
-	can_set_rx_standard_filter(can_instance, &sd_filter,
-							   CAN_RX_STANDARD_FILTER_INDEX_1);
-	can_enable_interrupt(can_instance, CAN_RX_FIFO_0_NEW_MESSAGE);
-}
-static void can_set_extended_filter_0(struct can_module *const can_instance)
-{
-	struct can_extended_message_filter_element et_filter;
-	can_get_extended_message_filter_element_default(&et_filter);
-	et_filter.F0.bit.EFID1 = 0;
-	et_filter.F0.bit.EFEC =
-			CAN_EXTENDED_MESSAGE_FILTER_ELEMENT_F0_EFEC_STRXBUF_Val;
-	et_filter.F1.bit.EFID2 = 0;
-	can_set_rx_extended_filter(can_instance, &et_filter,
-							   CAN_RX_EXTENDED_FILTER_INDEX_0);
-	can_enable_interrupt(can_instance, CAN_RX_BUFFER_NEW_MESSAGE);
-}
-static void can_set_extended_filter_1(struct can_module *const can_instance)
-{
-	struct can_extended_message_filter_element et_filter;
-	can_get_extended_message_filter_element_default(&et_filter);
-	et_filter.F0.bit.EFID1 = CAN_RX_EXTENDED_FILTER_ID_1;
-	can_set_rx_extended_filter(can_instance, &et_filter,
-							   CAN_RX_EXTENDED_FILTER_INDEX_1);
-	can_enable_interrupt(can_instance, CAN_RX_FIFO_1_NEW_MESSAGE);
-}
-
-
 
 void usart_read_callback(struct usart_module *const usart_module) {
 	char *string = "read callback";
@@ -300,20 +217,13 @@ void vCanTask(void *pvParameters) {
 
 	//TODO prepare CAN interface
 
-	//xlog(&(can_instance_glbl->hw->IE.reg),4);
-
 	ulog_s("\r\n");
-	//can_set_standard_filter_0(can_instance_glbl);
-	//can_set_extended_filter_0(can_instance_glbl);
-	//xlog(&(can_instance_glbl->hw->IE.reg),4);
 
-	//can_enable_interrupt(can_instance_glbl, CAN_RX_BUFFER_NEW_MESSAGE);
 	can_enable_interrupt(can_instance_glbl, CAN_RX_FIFO_0_NEW_MESSAGE);
 	can_enable_interrupt(can_instance_glbl, CAN_RX_FIFO_1_NEW_MESSAGE);
 
 	for (;;) {
-		//ulog_s(can_instance_glbl->hw->)
-		vTaskDelay((const TickType_t) 1000);
+		vTaskDelay((const TickType_t) 500);
 		//port_pin_toggle_output_level(LED_0_PIN);
 
 		// TODO perform CAN task
@@ -322,19 +232,9 @@ void vCanTask(void *pvParameters) {
 
 		//uint8_t string[] = "senddatatopc\r\n";
 		//usart_write_buffer_wait(usart_instance, string, sizeof(string));
-		uint32_t int_status = can_read_interrupt_status(can_instance_glbl);
-		uint8_t val = (uint8_t) (int_status >> 24);
-		xlog(&val, 1);
-		val = (uint8_t) (int_status >> 16);
-		xlog(&val, 1);
-		val = (uint8_t) (int_status >> 8);
-		xlog(&val, 1);
-		val = (uint8_t) (int_status >> 0);
-		xlog(&val, 1);
-
-
 
 		if (CHECKBIT(CAN_flags, MSG_WAITING)) {
+			ulog_s("data received");
 			// check frame format
 			if (!CAN_rx_msg.format) {    // Standart Frame
 				if (!CAN_rx_msg.rtr) {
@@ -529,7 +429,7 @@ uint8_t exec_usb_cmd(uint8_t *cmd_buf) {
 		case SET_BITRATE:
 
 			//TODO remove these 2 cmds, used for testing only
-			*(cmd_buf_pntr+1) = 5;
+			*(cmd_buf_pntr + 1) = 5;
 			cmd_len = 2;
 
 			ulog_s("set bitrate");
@@ -569,7 +469,7 @@ uint8_t exec_usb_cmd(uint8_t *cmd_buf) {
 			}
 
 			// check if CAN controller is in reset mode
-			if (CHECKBIT(CAN_flags, BUS_ON)){
+			if (CHECKBIT(CAN_flags, BUS_ON)) {
 				ulog_s("controller in reset mode");
 				return ERROR;
 			}
@@ -636,7 +536,7 @@ uint8_t exec_usb_cmd(uint8_t *cmd_buf) {
 			ulog_s("send 11bit ID message");
 			// check if CAN controller is in reset mode or busy
 			if (!CHECKBIT(CAN_flags, BUS_ON) || CHECKBIT(CAN_flags, TX_BUSY)) {
-				xlog(&CAN_flags,2);
+				xlog(&CAN_flags, 2);
 				ulog_s("CAN controller in reset mode or busy");
 				return ERROR;
 			}
@@ -820,17 +720,17 @@ uint8_t exec_usb_cmd(uint8_t *cmd_buf) {
 			// return error if controller is not initialized or already open
 			if (!CHECKBIT(CAN_flags, CAN_INIT))
 				ulog_s("can not initlzd");
-				return ERROR;
+			return ERROR;
 
 			// check if CAN controller is in reset mode
 			if (CHECKBIT(CAN_flags, BUS_ON))
 				ulog_s("can ctrl in reset");
-				return ERROR;
+			return ERROR;
 
 			// switch to listen only mode
-		/*	do {
-				ModeControlReg = _BV(LOM_Bit);
-			} while ((ModeControlReg & _BV(RM_RR_Bit)) == _BV(RM_RR_Bit));*/
+			/*	do {
+					ModeControlReg = _BV(LOM_Bit);
+				} while ((ModeControlReg & _BV(RM_RR_Bit)) == _BV(RM_RR_Bit));*/
 			SETBIT(CAN_flags, BUS_ON);
 			return CR;
 
@@ -863,32 +763,12 @@ void init_can_mem() {
 }
 
 
-void CAN0_Handler(void)
-{
+void CAN0_Handler(void) {
+
+	SETBIT(CAN_flags, MSG_WAITING);
+
 	volatile uint32_t status, i, rx_buffer_index;
 	status = can_read_interrupt_status(can_instance_glbl);
-	/*if (status & CAN_RX_BUFFER_NEW_MESSAGE) {
-		port_pin_set_output_level(LED0_PIN, LED0_INACTIVE);
-		can_clear_interrupt_status(can_instance_glbl, CAN_RX_BUFFER_NEW_MESSAGE);
-		for (i = 0; i < CONF_CAN0_RX_BUFFER_NUM; i++) {
-			if (can_rx_get_buffer_status(can_instance_glbl, i)) {
-				rx_buffer_index = i;
-				can_rx_clear_buffer_status(can_instance_glbl, i);
-				can_get_rx_buffer_element(can_instance_glbl, &rx_element_buffer,
-										  rx_buffer_index);
-				if (rx_element_buffer.R0.bit.XTD) {
-					//ulog_s("\n\r Extended FD message received in Rx buffer. The received data is: \r\n");
-				} else {
-					//ulog_s("\n\r Standard FD message received in Rx buffer. The received data is: \r\n");
-				}
-				//for (i = 0; i < CONF_CAN_ELEMENT_DATA_SIZE; i++) {
-				//	printf("  %d",rx_element_buffer.data[i]);
-				//}
-				xlog(rx_element_buffer.data,CONF_CAN_ELEMENT_DATA_SIZE);
-				ulog_s("\r\n\r\n");
-			}
-		}
-	}*/
 	if (status & CAN_RX_FIFO_0_NEW_MESSAGE) {
 		port_pin_set_output_level(LED0_PIN, LED0_INACTIVE);
 		can_clear_interrupt_status(can_instance_glbl, CAN_RX_FIFO_0_NEW_MESSAGE);
@@ -911,7 +791,7 @@ void CAN0_Handler(void)
 			//for (i = 0; i < rx_element_fifo_0.R1.bit.DLC; i++) {
 			//	printf("  %d",rx_element_fifo_0.data[i]);
 			//}
-			xlog(rx_element_fifo_0.data,(uint8_t) (rx_element_fifo_0.R1.bit.DLC));
+			xlog(rx_element_fifo_0.data, (uint8_t) (rx_element_fifo_0.R1.bit.DLC));
 		}
 		ulog_s("\r\n\r\n");
 	}
@@ -936,7 +816,7 @@ void CAN0_Handler(void)
 	if ((status & CAN_PROTOCOL_ERROR_ARBITRATION)
 		|| (status & CAN_PROTOCOL_ERROR_DATA)) {
 		can_clear_interrupt_status(can_instance_glbl, CAN_PROTOCOL_ERROR_ARBITRATION
-												  | CAN_PROTOCOL_ERROR_DATA);
+													  | CAN_PROTOCOL_ERROR_DATA);
 		ulog_s("Protocol error, please double check the clock in two boards. \r\n\r\n");
 	}
 }

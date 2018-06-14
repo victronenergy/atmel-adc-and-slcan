@@ -34,7 +34,6 @@ int main(void) {
 	 */
 	configure_log_uart(&debug_ulog);
 
-	//TODO this is resposible for error at start
 	configure_can(&can_instance);
 
 	configure_uart(&usart_instance);

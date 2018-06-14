@@ -37,7 +37,6 @@ static volatile uint32_t standard_receive_index = 0;
 static volatile uint32_t extended_receive_index = 0;
 static struct can_rx_element_fifo_0 rx_element_fifo_0;
 static struct can_rx_element_fifo_1 rx_element_fifo_1;
-static struct can_rx_element_buffer rx_element_buffer;
 
 #define HW_VER        0x30		// hardware version
 #define SW_VER        0x40		// software version
