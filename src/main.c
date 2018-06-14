@@ -35,7 +35,7 @@ int main(void) {
 	configure_log_uart(&debug_ulog);
 
 	//TODO this is resposible for error at start
-	//configure_can(&can_instance);
+	configure_can(&can_instance);
 
 	configure_uart(&usart_instance);
 
@@ -52,7 +52,7 @@ int main(void) {
 	configure_ulog(&debug_ulog);
 	ulog_s("prepare Tasks\r\n");
 	TaskHandle_t task_handles[1];
-	TaskHandle_t can_task = vCreateCanTask(&usart_instance);//, &can_instance);
+	TaskHandle_t can_task = vCreateCanTask(&usart_instance, &can_instance);
 	task_handles[0] = &can_task;
 	vCreateStackTask((TaskHandle_t **) &task_handles, 1);
 

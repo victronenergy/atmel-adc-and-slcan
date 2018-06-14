@@ -8,7 +8,7 @@
 #ifndef SAMC_FREERTOS_CAN_TASK_H
 #define SAMC_FREERTOS_CAN_TASK_H
 
-TaskHandle_t vCreateCanTask(usart_module_t *p_usart_instance);//, struct can_module *can_instance);
+TaskHandle_t vCreateCanTask(usart_module_t *p_usart_instance, struct can_module *can_instance);
 
 /*
  *
@@ -18,14 +18,14 @@ TaskHandle_t vCreateCanTask(usart_module_t *p_usart_instance);//, struct can_mod
 //Define CAN standard filter setting.
 #define CAN_RX_STANDARD_FILTER_INDEX_0    0
 #define CAN_RX_STANDARD_FILTER_INDEX_1    1
-#define CAN_RX_STANDARD_FILTER_ID_0     0x45A
+#define CAN_RX_STANDARD_FILTER_ID_0     0x00//0x45A
 #define CAN_RX_STANDARD_FILTER_ID_0_BUFFER_INDEX     2
-#define CAN_RX_STANDARD_FILTER_ID_1     0x469
+#define CAN_RX_STANDARD_FILTER_ID_1     0x00//0x469
 #define CAN_RX_EXTENDED_FILTER_INDEX_0    0
 #define CAN_RX_EXTENDED_FILTER_INDEX_1    1
-#define CAN_RX_EXTENDED_FILTER_ID_0     0x100000A5
+#define CAN_RX_EXTENDED_FILTER_ID_0     0x00000000//0x100000A5
 #define CAN_RX_EXTENDED_FILTER_ID_0_BUFFER_INDEX     1
-#define CAN_RX_EXTENDED_FILTER_ID_1     0x10000096
+#define CAN_RX_EXTENDED_FILTER_ID_1     0x00000000//0x10000096
 
 // Define CAN standard transfer message setting.
 #define CAN_TX_BUFFER_INDEX    0

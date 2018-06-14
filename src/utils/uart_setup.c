@@ -62,11 +62,19 @@ void configure_can(struct can_module *can_instance){
 	/* Initialize the module. */
 	struct can_config config_can;
 	can_get_config_defaults(&config_can);
+	config_can.nonmatching_frames_action_standard = CAN_NONMATCHING_FRAMES_FIFO_0;
+	config_can.nonmatching_frames_action_extended = CAN_NONMATCHING_FRAMES_FIFO_1;
+	config_can.remote_frames_standard_reject = false;
+	config_can.remote_frames_extended_reject = false;
+	config_can.extended_id_mask = 0x00000000;
+
 	can_init(can_instance, CAN_MODULE, &config_can);
-	can_enable_fd_mode(can_instance);
+	//can_enable_fd_mode(can_instance);
+
 	can_start(can_instance);
 	/* Enable interrupts for this CAN module */
 	system_interrupt_enable(SYSTEM_INTERRUPT_MODULE_CAN0);
-	can_enable_interrupt(can_instance, CAN_PROTOCOL_ERROR_ARBITRATION
-										| CAN_PROTOCOL_ERROR_DATA);
+	can_enable_interrupt(can_instance, CAN_PROTOCOL_ERROR_ARBITRATION | CAN_PROTOCOL_ERROR_DATA);
+
+
 }

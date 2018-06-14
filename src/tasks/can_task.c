@@ -119,7 +119,7 @@ uint8_t exec_usb_cmd(uint8_t *cmd_buf);
 static void can_send_standard_message(struct can_module *const can_instance, uint32_t id_value, uint8_t *data);
 
 
-uint8_t init_CAN(void);
+uint8_t init_CAN_mictronics(void);
 
 uint8_t transmit_CAN(struct can_module *const can_instance, uint32_t id_value, uint8_t *data);
 
@@ -129,7 +129,7 @@ void write_CAN_reg(uint8_t cmd_len, uint8_t tmp_regdata);
 
 
 // TODO implement
-uint8_t init_CAN(void) {
+uint8_t init_CAN_mictronics(void) {
 
 	// clear CAN error flags
 	CAN_flags &= 0x00FF;
@@ -212,8 +212,8 @@ static void can_set_standard_filter_0(struct can_module *const can_instance)
 {
 	struct can_standard_message_filter_element sd_filter;
 	can_get_standard_message_filter_element_default(&sd_filter);
-	sd_filter.S0.bit.SFID2 = CAN_RX_STANDARD_FILTER_ID_0_BUFFER_INDEX;
-	sd_filter.S0.bit.SFID1 = CAN_RX_STANDARD_FILTER_ID_0;
+	sd_filter.S0.bit.SFID2 = 0;
+	sd_filter.S0.bit.SFID1 = 0;
 	sd_filter.S0.bit.SFEC =
 			CAN_STANDARD_MESSAGE_FILTER_ELEMENT_S0_SFEC_STRXBUF_Val;
 	can_set_rx_standard_filter(can_instance, &sd_filter,
@@ -233,10 +233,10 @@ static void can_set_extended_filter_0(struct can_module *const can_instance)
 {
 	struct can_extended_message_filter_element et_filter;
 	can_get_extended_message_filter_element_default(&et_filter);
-	et_filter.F0.bit.EFID1 = CAN_RX_EXTENDED_FILTER_ID_0;
+	et_filter.F0.bit.EFID1 = 0;
 	et_filter.F0.bit.EFEC =
 			CAN_EXTENDED_MESSAGE_FILTER_ELEMENT_F0_EFEC_STRXBUF_Val;
-	et_filter.F1.bit.EFID2 = CAN_RX_EXTENDED_FILTER_ID_0_BUFFER_INDEX;
+	et_filter.F1.bit.EFID2 = 0;
 	can_set_rx_extended_filter(can_instance, &et_filter,
 							   CAN_RX_EXTENDED_FILTER_INDEX_0);
 	can_enable_interrupt(can_instance, CAN_RX_BUFFER_NEW_MESSAGE);
@@ -292,7 +292,7 @@ void vCanTask(void *pvParameters) {
 
 	uint8_t i;
 
-	init_CAN();
+	init_CAN_mictronics();
 
 	init_can_mem();
 
@@ -300,11 +300,19 @@ void vCanTask(void *pvParameters) {
 
 	//TODO prepare CAN interface
 
+	//xlog(&(can_instance_glbl->hw->IE.reg),4);
 
-	can_set_standard_filter_0(can_instance_glbl);
+	ulog_s("\r\n");
+	//can_set_standard_filter_0(can_instance_glbl);
+	//can_set_extended_filter_0(can_instance_glbl);
+	//xlog(&(can_instance_glbl->hw->IE.reg),4);
 
+	//can_enable_interrupt(can_instance_glbl, CAN_RX_BUFFER_NEW_MESSAGE);
+	can_enable_interrupt(can_instance_glbl, CAN_RX_FIFO_0_NEW_MESSAGE);
+	can_enable_interrupt(can_instance_glbl, CAN_RX_FIFO_1_NEW_MESSAGE);
 
 	for (;;) {
+		//ulog_s(can_instance_glbl->hw->)
 		vTaskDelay((const TickType_t) 1000);
 		//port_pin_toggle_output_level(LED_0_PIN);
 
@@ -314,6 +322,16 @@ void vCanTask(void *pvParameters) {
 
 		//uint8_t string[] = "senddatatopc\r\n";
 		//usart_write_buffer_wait(usart_instance, string, sizeof(string));
+		uint32_t int_status = can_read_interrupt_status(can_instance_glbl);
+		uint8_t val = (uint8_t) (int_status >> 24);
+		xlog(&val, 1);
+		val = (uint8_t) (int_status >> 16);
+		xlog(&val, 1);
+		val = (uint8_t) (int_status >> 8);
+		xlog(&val, 1);
+		val = (uint8_t) (int_status >> 0);
+		xlog(&val, 1);
+
 
 
 		if (CHECKBIT(CAN_flags, MSG_WAITING)) {
@@ -365,7 +383,7 @@ void vCanTask(void *pvParameters) {
 			CLEARBIT(CAN_flags, MSG_WAITING);
 		}
 
-		xlog(uart_rx_buffer, UART_RX_BUFSIZE);
+		//xlog(uart_rx_buffer, UART_RX_BUFSIZE);
 		ulog_s("\r\n");
 		// read char from USB
 		usb_rx_char = usb_getc(usart_instance, uart_rx_buffer);    // check for new chars from USB
@@ -386,6 +404,7 @@ void vCanTask(void *pvParameters) {
 			if (buf_ind < sizeof(cmd_buf) - 1)
 				buf_ind++;
 		}
+		flush_clog();
 	}
 }
 
@@ -502,7 +521,7 @@ uint8_t exec_usb_cmd(uint8_t *cmd_buf) {
 			*tmp_pntr <<= 4;
 			*tmp_pntr |= ascii2byte(++cmd_buf_pntr);
 			// init CAN controller with new values
-			return init_CAN();
+			return init_CAN_mictronics();
 
 			// set bitrate via BTR
 		case SET_BTR:
@@ -538,7 +557,7 @@ uint8_t exec_usb_cmd(uint8_t *cmd_buf) {
 			}
 			// init CAN controller
 			SETBIT(CAN_flags, CAN_INIT);    // indicate initialized controller
-			return init_CAN();
+			return init_CAN_mictronics();
 
 			// open CAN channel
 		case OPEN_CAN_CHAN:
@@ -800,22 +819,24 @@ uint8_t exec_usb_cmd(uint8_t *cmd_buf) {
 			ulog_s("listen only mode");
 			// return error if controller is not initialized or already open
 			if (!CHECKBIT(CAN_flags, CAN_INIT))
+				ulog_s("can not initlzd");
 				return ERROR;
 
 			// check if CAN controller is in reset mode
 			if (CHECKBIT(CAN_flags, BUS_ON))
+				ulog_s("can ctrl in reset");
 				return ERROR;
 
 			// switch to listen only mode
-			do {
+		/*	do {
 				ModeControlReg = _BV(LOM_Bit);
-			} while ((ModeControlReg & _BV(RM_RR_Bit)) == _BV(RM_RR_Bit));
+			} while ((ModeControlReg & _BV(RM_RR_Bit)) == _BV(RM_RR_Bit));*/
 			SETBIT(CAN_flags, BUS_ON);
 			return CR;
 
 			//TODO remove the following case
 		case 'Q':
-			ulog_s("Q testing case");
+			ulog_s("Q testing case\r\n");
 			can_send_standard_message(can_instance_glbl, CAN_RX_STANDARD_FILTER_ID_0, data);
 
 
@@ -844,10 +865,10 @@ void init_can_mem() {
 
 void CAN0_Handler(void)
 {
-	ulog_s("CAN Handler was called\r\n");
 	volatile uint32_t status, i, rx_buffer_index;
 	status = can_read_interrupt_status(can_instance_glbl);
-	if (status & CAN_RX_BUFFER_NEW_MESSAGE) {
+	/*if (status & CAN_RX_BUFFER_NEW_MESSAGE) {
+		port_pin_set_output_level(LED0_PIN, LED0_INACTIVE);
 		can_clear_interrupt_status(can_instance_glbl, CAN_RX_BUFFER_NEW_MESSAGE);
 		for (i = 0; i < CONF_CAN0_RX_BUFFER_NUM; i++) {
 			if (can_rx_get_buffer_status(can_instance_glbl, i)) {
@@ -856,9 +877,9 @@ void CAN0_Handler(void)
 				can_get_rx_buffer_element(can_instance_glbl, &rx_element_buffer,
 										  rx_buffer_index);
 				if (rx_element_buffer.R0.bit.XTD) {
-					ulog_s("\n\r Extended FD message received in Rx buffer. The received data is: \r\n");
+					//ulog_s("\n\r Extended FD message received in Rx buffer. The received data is: \r\n");
 				} else {
-					ulog_s("\n\r Standard FD message received in Rx buffer. The received data is: \r\n");
+					//ulog_s("\n\r Standard FD message received in Rx buffer. The received data is: \r\n");
 				}
 				//for (i = 0; i < CONF_CAN_ELEMENT_DATA_SIZE; i++) {
 				//	printf("  %d",rx_element_buffer.data[i]);
@@ -867,8 +888,9 @@ void CAN0_Handler(void)
 				ulog_s("\r\n\r\n");
 			}
 		}
-	}
+	}*/
 	if (status & CAN_RX_FIFO_0_NEW_MESSAGE) {
+		port_pin_set_output_level(LED0_PIN, LED0_INACTIVE);
 		can_clear_interrupt_status(can_instance_glbl, CAN_RX_FIFO_0_NEW_MESSAGE);
 		can_get_rx_fifo_0_element(can_instance_glbl, &rx_element_fifo_0,
 								  standard_receive_index);
@@ -894,6 +916,7 @@ void CAN0_Handler(void)
 		ulog_s("\r\n\r\n");
 	}
 	if (status & CAN_RX_FIFO_1_NEW_MESSAGE) {
+		port_pin_set_output_level(LED0_PIN, LED0_INACTIVE);
 		can_clear_interrupt_status(can_instance_glbl, CAN_RX_FIFO_1_NEW_MESSAGE);
 		can_get_rx_fifo_1_element(can_instance_glbl, &rx_element_fifo_1,
 								  extended_receive_index);
@@ -919,10 +942,10 @@ void CAN0_Handler(void)
 }
 
 
-TaskHandle_t vCreateCanTask(usart_module_t *p_usart_instance){ //}, struct can_module *p_can_instance) {
+TaskHandle_t vCreateCanTask(usart_module_t *p_usart_instance, struct can_module *p_can_instance) {
 
 	usart_instance = p_usart_instance;
-	//can_instance_glbl = p_can_instance;
+	can_instance_glbl = p_can_instance;
 
 	ulog_s("creating CAN Task...\r\n");
 
