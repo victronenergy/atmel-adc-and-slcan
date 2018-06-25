@@ -13,7 +13,7 @@ set(SOURCE_FILES
 		lib/ASF/common2/services/delay/sam0/systick_counter.c
 		lib/ASF/common2/services/delay/sam0/systick_counter.h
 		lib/ASF/common2/services/delay/delay.h
-        lib/ASF/sam0/boards/samc21_xplained_pro/samc21_xplained_pro.h
+		lib/ASF/sam0/boards/samc21_usbcan/samc21_usbcan.h
 		lib/ASF/sam0/drivers/can/can.h
 		lib/ASF/sam0/drivers/can/can.c
 		lib/ASF/sam0/drivers/can/module_config/conf_can.h
@@ -205,7 +205,6 @@ set(SOURCE_FILES
 		config/conf_clocks.h
 		config/FreeRTOSConfig.h
 		config/custom_board_template.h
-		config/samc21_xplained_pro.h
 		config/custom_board.h
 		utils/board_setup.c
 		utils/uart_setup.c

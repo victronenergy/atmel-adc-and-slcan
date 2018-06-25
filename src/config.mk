@@ -123,7 +123,7 @@ CFLAGS =
 #   EXT_BOARD  Optional extension board in use, see boards/board.h for a list.
 CPPFLAGS = \
        -D ARM_MATH_CM0PLUS=true                           \
-       -D BOARD=SAMC21_XPLAINED_PRO                       \
+       -D BOARD=SAMC21_USBCAN                       \
        -D CUSTOM_BOARD=CUSTOM_BOARD_TEMPLATE \
        -D __SAMC21J18A__								  \
        -D USART_CALLBACK_MODE=true						\

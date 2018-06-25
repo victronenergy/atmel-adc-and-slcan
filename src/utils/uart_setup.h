@@ -13,7 +13,9 @@
 #include <can.h>
 
 void configure_log_uart(usart_module_t *usart_module);
-void configure_uart(usart_module_t *usart_module);
-void configure_can(struct can_module *can_instance);
+void configure_usbcan0(usart_module_t *usart_module);
+void configure_usbcan1(usart_module_t *usart_module);
+void configure_can0(struct can_module *can_instance);
+void configure_can1(struct can_module *can_instance);
 
 #endif //SAMC_FREERTOS_COMM_INIT_H

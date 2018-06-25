@@ -3,7 +3,6 @@
 //
 
 #include <log.h>
-#include <samc21_xplained_pro.h>
 #include "can_task.h"
 #include "usb.h"
 #include <ctype.h>
