@@ -41,6 +41,14 @@ int main(void) {
 	configure_usbcan0(&usbcan0_instance);
 	configure_usbcan1(&usbcan1_instance);
 
+	cantask_params params_task0;
+	params_task0.usart_instance = &usbcan0_instance;
+	params_task0.can_instance = &can0_instance;
+
+	cantask_params params_task1;
+	params_task1.usart_instance = &usbcan1_instance;
+	params_task1.can_instance = &can1_instance;
+
 	/*
 	 * Global Interrupts Enable!
 	 */
@@ -53,12 +61,12 @@ int main(void) {
 
 	configure_ulog(&debug_ulog);
 	ulog_s("prepare Tasks\r\n");
-	TaskHandle_t task_handles[1];
-	TaskHandle_t can_task0 = vCreateCanTask(&usbcan0_instance, &can0_instance);
-	//TaskHandle_t can_task1 = vCreateCanTask(&usbcan1_instance, &can1_instance);
+	TaskHandle_t task_handles[2];
+	TaskHandle_t can_task0 = vCreateCanTask(&params_task0);
+	TaskHandle_t can_task1 = vCreateCanTask(&params_task1);
 	task_handles[0] = &can_task0;
-	//task_handles[1] = &can_task1;
-	vCreateStackTask((TaskHandle_t **) &task_handles, 1);
+	task_handles[1] = &can_task1;
+	vCreateStackTask((TaskHandle_t **) &task_handles, 2);
 
 	ulog_s("start scheduler\r\n");
 	vTaskStartScheduler();

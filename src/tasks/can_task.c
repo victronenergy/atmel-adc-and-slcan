@@ -55,14 +55,9 @@
 // TODO END
 
 
-//TODO not use globally
-usart_module_t *usart_instance;
 
 uint8_t uart_rx_buffer[UART_RX_BUFSIZE];
 
-// CAN module, necessary to be global for CAN interrupt
-// TODO make sure this does not mix up the respective CAN channels
-struct can_module *can_instance_glbl;
 
 // CAN init values for ACR, AMR and BTR registers after power up
 struct {
@@ -92,6 +87,9 @@ struct {
 } CAN_rx_msg;                  // length 15 byte/each
 
 
+
+
+
 volatile uint16_t CAN_flags;
 volatile uint8_t last_ecr;
 volatile uint8_t last_alc;
@@ -110,9 +108,9 @@ void usart_read_callback(struct usart_module *usart_module);
 
 void usart_write_callback(struct usart_module *usart_module);
 
-void configure_usart_callbacks(void);
+void configure_usart_callbacks(usart_module_t *usart_instance);
 
-uint8_t exec_usb_cmd(uint8_t *cmd_buf);
+uint8_t exec_usb_cmd(usart_module_t *usart_instance, struct can_module *can_instance, uint8_t *cmd_buf);
 
 static void can_send_standard_message(struct can_module *can_instance, uint32_t id_value, uint8_t *data);
 
@@ -169,20 +167,18 @@ static void can_send_standard_message(struct can_module *const can_instance, uin
 	can_tx_transfer_request(can_instance, 1 << CAN_TX_BUFFER_INDEX);
 }
 
-void usart_read_callback(struct usart_module *const usart_module) {
+void usart_read_callback(struct usart_module *const usart_instance) {
 	char *string = "read callback";
 	usart_write_buffer_job(usart_instance, (uint8_t *) string, strlen(string));
 	//usart_write_buffer_job(usart_instance, (uint8_t *)uart_rx_buffer, UART_RX_BUFSIZE);
 	//port_pin_toggle_output_level(LED_0_PIN);
-
-
 }
 
 void usart_write_callback(struct usart_module *const usart_module) {
 	//port_pin_toggle_output_level(LED_0_PIN);
 }
 
-void configure_usart_callbacks(void) {
+void configure_usart_callbacks(usart_module_t *usart_instance) {
 	usart_register_callback(usart_instance,
 							usart_write_callback, USART_CALLBACK_BUFFER_TRANSMITTED);
 	usart_register_callback(usart_instance,
@@ -197,6 +193,17 @@ void configure_usart_callbacks(void) {
 #pragma clang diagnostic ignored "-Wmissing-noreturn"
 
 void vCanTask(void *pvParameters) {
+
+	cantask_params *params = (cantask_params *) pvParameters;
+
+
+	// Define CAN standard receive message setting.
+	static volatile uint32_t standard_receive_index = 0;
+	static volatile uint32_t extended_receive_index = 0;
+	static struct can_rx_element_fifo_0 rx_element_fifo_0;
+	static struct can_rx_element_fifo_1 rx_element_fifo_1;
+
+
 	ulog_s("cantask begin loop\r\n");
 
 	vTaskDelay((const TickType_t) 1000);
@@ -212,72 +219,73 @@ void vCanTask(void *pvParameters) {
 
 	init_can_mem();
 
-	configure_usart_callbacks();
+	configure_usart_callbacks(params->usart_instance);
 
 	//TODO prepare CAN interface
 
 	ulog_s("\r\n");
 
-	can_enable_interrupt(can_instance_glbl, CAN_RX_FIFO_0_NEW_MESSAGE);
-	can_enable_interrupt(can_instance_glbl, CAN_RX_FIFO_1_NEW_MESSAGE);
+	//can_enable_interrupt(can_instance_0, CAN_RX_FIFO_0_NEW_MESSAGE);
+	//can_enable_interrupt(can_instance_0, CAN_RX_FIFO_1_NEW_MESSAGE);
 
 	for (;;) {
-		vTaskDelay((const TickType_t) 100);
+		vTaskDelay((const TickType_t) 1000);
 		//port_pin_toggle_output_level(LED_0_PIN);
 
 		// TODO perform CAN task
 
-		//usart_read_buffer_wait(usart_instance, uart_rx_buffer, 1);
+		//usart_read_buffer_wait(params->usart_instance, uart_rx_buffer, 1);
 
 		//uint8_t string[] = "senddatatopc\r\n";
-		//usart_write_buffer_wait(usart_instance, string, sizeof(string));
+		//usart_write_buffer_wait(params->usart_instance, string, sizeof(string));
+
+
+		uint32_t status = can_read_interrupt_status(params->can_instance);
+		if (status & CAN_RX_FIFO_1_NEW_MESSAGE) {
+				can_clear_interrupt_status(params->can_instance, CAN_RX_FIFO_1_NEW_MESSAGE);
+				SETBIT(CAN_flags, MSG_WAITING);
+		}
+
+
 
 		if (CHECKBIT(CAN_flags, MSG_WAITING)) {
 			ulog_s("data received");
-/*
-			volatile uint32_t status, rx_buffer_index;
-			status = can_read_interrupt_status(can_instance_glbl);
-			if (status & CAN_RX_FIFO_1_NEW_MESSAGE) {
-				can_clear_interrupt_status(can_instance_glbl, CAN_RX_FIFO_1_NEW_MESSAGE);
-				ulog_s("somesing");
-			}
-*/
 
 			// check frame format
 			if (!CAN_rx_msg.format) {    // Standart Frame
 				if (!CAN_rx_msg.rtr) {
-					usb_putc(usart_instance, SEND_11BIT_ID);
+					usb_putc(params->usart_instance, SEND_11BIT_ID);
 				}        // send command tag
 				else {
-					usb_putc(usart_instance, SEND_R11BIT_ID);
+					usb_putc(params->usart_instance, SEND_R11BIT_ID);
 				}
 
 				// send high byte of ID
 				if (((CAN_rx_msg.id >> 8) & 0x0F) < 10)
-					usb_putc(usart_instance, (uint8_t) (((CAN_rx_msg.id >> 8) & 0x0F) + 48));
+					usb_putc(params->usart_instance, (uint8_t) (((CAN_rx_msg.id >> 8) & 0x0F) + 48));
 				else
-					usb_putc(usart_instance, (uint8_t) (((CAN_rx_msg.id >> 8) & 0x0F) + 55));
+					usb_putc(params->usart_instance, (uint8_t) (((CAN_rx_msg.id >> 8) & 0x0F) + 55));
 				// send low byte of ID
-				usb_byte2ascii(usart_instance, (uint8_t) (CAN_rx_msg.id & 0xFF));
+				usb_byte2ascii(params->usart_instance, (uint8_t) (CAN_rx_msg.id & 0xFF));
 			} else {        // Extented Frame
 				if (!CAN_rx_msg.rtr) {
-					usb_putc(usart_instance, SEND_29BIT_ID);
+					usb_putc(params->usart_instance, SEND_29BIT_ID);
 				}        // send command tag
 				else {
-					usb_putc(usart_instance, SEND_R29BIT_ID);
+					usb_putc(params->usart_instance, SEND_R29BIT_ID);
 				}
 				// send ID bytes
-				usb_byte2ascii(usart_instance, (uint8_t) ((CAN_rx_msg.id >> 24) & 0xFF));
-				usb_byte2ascii(usart_instance, (uint8_t) ((CAN_rx_msg.id >> 16) & 0xFF));
-				usb_byte2ascii(usart_instance, (uint8_t) ((CAN_rx_msg.id >> 8) & 0xFF));
-				usb_byte2ascii(usart_instance, (uint8_t) (CAN_rx_msg.id & 0xFF));
+				usb_byte2ascii(params->usart_instance, (uint8_t) ((CAN_rx_msg.id >> 24) & 0xFF));
+				usb_byte2ascii(params->usart_instance, (uint8_t) ((CAN_rx_msg.id >> 16) & 0xFF));
+				usb_byte2ascii(params->usart_instance, (uint8_t) ((CAN_rx_msg.id >> 8) & 0xFF));
+				usb_byte2ascii(params->usart_instance, (uint8_t) (CAN_rx_msg.id & 0xFF));
 			}
 			// send data length code
-			usb_putc(usart_instance, (uint8_t) (CAN_rx_msg.len + '0'));
+			usb_putc(params->usart_instance, (uint8_t) (CAN_rx_msg.len + '0'));
 			if (!CAN_rx_msg.rtr) {    // send data only if no remote frame request
 				// send data bytes
 				for (i = 0; i < CAN_rx_msg.len; i++)
-					usb_byte2ascii(usart_instance, CAN_rx_msg.data[i]);
+					usb_byte2ascii(params->usart_instance, CAN_rx_msg.data[i]);
 			}
 			/*	TODO clarify: TIMESTAMP required at all?
 			// send time stamp if required
@@ -287,18 +295,19 @@ void vCanTask(void *pvParameters) {
 			}
 			 */
 			// send end tag
-			usb_putc(usart_instance, CR);
+			usb_putc(params->usart_instance, CR);
 			CLEARBIT(CAN_flags, MSG_WAITING);
 		}
 
 		//xlog(uart_rx_buffer, UART_RX_BUFSIZE);
 		ulog_s("\r\n");
 		// read char from USB
-		usb_rx_char = usb_getc(usart_instance, uart_rx_buffer);    // check for new chars from USB
+		usb_rx_char = usb_getc(params->usart_instance, uart_rx_buffer);    // check for new chars from USB
 		if (usb_rx_char == CR)    // check for end of command
 		{
 			// Execute USB command and return status to terminal
-			usb_putc(usart_instance, exec_usb_cmd(cmd_buf));
+			usb_putc(params->usart_instance, exec_usb_cmd(params->usart_instance,
+														  params->can_instance, cmd_buf));
 
 			// flush command buffer
 			for (buf_ind = 0; buf_ind < CMD_BUFFER_LENGTH; buf_ind++)
@@ -319,7 +328,7 @@ void vCanTask(void *pvParameters) {
 #pragma clang diagnostic pop
 
 
-uint8_t exec_usb_cmd(uint8_t *cmd_buf) {
+uint8_t exec_usb_cmd(usart_module_t *usart_instance, struct can_module *can_instance, uint8_t *cmd_buf) {
 	ulog_s("EXEC USB CMD\r\n");
 
 	uint8_t cmd_len = strlen((char *) cmd_buf);    // get command length
@@ -538,7 +547,7 @@ uint8_t exec_usb_cmd(uint8_t *cmd_buf) {
 
 			// if transmit buffer was empty send message
 
-			return transmit_CAN(can_instance_glbl, CAN_RX_STANDARD_FILTER_ID_0, CAN_tx_msg.data);
+			return transmit_CAN(can_instance, CAN_RX_STANDARD_FILTER_ID_0, CAN_tx_msg.data);
 
 		case SEND_11BIT_ID:
 			ulog_s("send 11bit ID message");
@@ -585,7 +594,7 @@ uint8_t exec_usb_cmd(uint8_t *cmd_buf) {
 			}
 			ulog_s("sending trending pending");
 			// if transmit buffer was empty send message
-			return transmit_CAN(can_instance_glbl, CAN_RX_STANDARD_FILTER_ID_0, CAN_tx_msg.data);
+			return transmit_CAN(can_instance, CAN_RX_STANDARD_FILTER_ID_0, CAN_tx_msg.data);
 
 			// send 29bit ID message
 		case SEND_R29BIT_ID:
@@ -620,7 +629,7 @@ uint8_t exec_usb_cmd(uint8_t *cmd_buf) {
 			// store data length
 			CAN_tx_msg.len = ascii2byte(++cmd_buf_pntr);
 			// if transmit buffer was empty send message
-			return transmit_CAN(can_instance_glbl, CAN_RX_STANDARD_FILTER_ID_0, CAN_tx_msg.data);
+			return transmit_CAN(can_instance, CAN_RX_STANDARD_FILTER_ID_0, CAN_tx_msg.data);
 
 		case SEND_29BIT_ID:
 			ulog_s("send 29bit ID message");
@@ -671,7 +680,7 @@ uint8_t exec_usb_cmd(uint8_t *cmd_buf) {
 				}
 			}
 			// if transmit buffer was empty send message
-			return transmit_CAN(can_instance_glbl, CAN_RX_STANDARD_FILTER_ID_0, CAN_tx_msg.data);
+			return transmit_CAN(can_instance, CAN_RX_STANDARD_FILTER_ID_0, CAN_tx_msg.data);
 
 			// read Error Capture Register
 			// read Arbitration Lost Register
@@ -745,7 +754,7 @@ uint8_t exec_usb_cmd(uint8_t *cmd_buf) {
 			//TODO remove the following case
 		case 'Q':
 			ulog_s("Q testing case\r\n");
-			can_send_standard_message(can_instance_glbl, CAN_RX_STANDARD_FILTER_ID_0, data);
+			can_send_standard_message(can_instance, CAN_RX_STANDARD_FILTER_ID_0, data);
 
 
 			return CR;
@@ -773,98 +782,113 @@ void init_can_mem() {
 
 void CAN0_Handler(void) {
 
-	ulog_s("received data on CAN0");
+	// not used, just to prevent errors
+	struct can_module *can_instance_0;
+
+
+	// Define CAN standard receive message setting.
+	static volatile uint32_t standard_receive_index = 0;
+	static volatile uint32_t extended_receive_index = 0;
+	static struct can_rx_element_fifo_0 rx_element_fifo_0;
+	static struct can_rx_element_fifo_1 rx_element_fifo_1;
+
 	SETBIT(CAN_flags, MSG_WAITING);
 
 	volatile uint32_t status, rx_buffer_index;
-	status = can_read_interrupt_status(can_instance_glbl);
+	status = can_read_interrupt_status(can_instance_0);
 	if (status & CAN_RX_FIFO_0_NEW_MESSAGE) {
-		can_clear_interrupt_status(can_instance_glbl, CAN_RX_FIFO_0_NEW_MESSAGE);
-		can_get_rx_fifo_0_element(can_instance_glbl, &rx_element_fifo_0,
+		can_clear_interrupt_status(can_instance_0, CAN_RX_FIFO_0_NEW_MESSAGE);
+		can_get_rx_fifo_0_element(can_instance_0, &rx_element_fifo_0,
 								  standard_receive_index);
-		can_rx_fifo_acknowledge(can_instance_glbl, 0,
+		can_rx_fifo_acknowledge(can_instance_0, 0,
 								standard_receive_index);
 		standard_receive_index++;
 		if (standard_receive_index == CONF_CAN0_RX_FIFO_0_NUM) {
 			standard_receive_index = 0;
 		}
-		ulog_s("\n\r Standard message received in FIFO 0. The received data is: \r\n");
-		xlog(rx_element_fifo_0.data, (uint8_t) (rx_element_fifo_0.R1.bit.DLC));
-		ulog_s("\r\n\r\n");
+		//ulog_s("\n\r Standard message received in FIFO 0. The received data is: \r\n");
+		//xlog(rx_element_fifo_0.data, (uint8_t) (rx_element_fifo_0.R1.bit.DLC));
+		//ulog_s("\r\n\r\n");
 	}
 	if (status & CAN_RX_FIFO_1_NEW_MESSAGE) {
-		can_clear_interrupt_status(can_instance_glbl, CAN_RX_FIFO_1_NEW_MESSAGE);
-		can_get_rx_fifo_1_element(can_instance_glbl, &rx_element_fifo_1,
+		can_clear_interrupt_status(can_instance_0, CAN_RX_FIFO_1_NEW_MESSAGE);
+		can_get_rx_fifo_1_element(can_instance_0, &rx_element_fifo_1,
 								  extended_receive_index);
-		can_rx_fifo_acknowledge(can_instance_glbl, 0,
+		can_rx_fifo_acknowledge(can_instance_0, 1,
 								extended_receive_index);
 		extended_receive_index++;
 		if (extended_receive_index == CONF_CAN0_RX_FIFO_1_NUM) {
 			extended_receive_index = 0;
 		}
-		ulog_s("\n\r Extended message received in FIFO 1. The received data is: \r\n");
-		xlog(rx_element_fifo_1.data, (uint8_t) (rx_element_fifo_1.R1.bit.DLC));
-		ulog_s("\r\n\r\n");
+		//ulog_s("\n\r Extended message received in FIFO 1. The received data is: \r\n");
+		//xlog(rx_element_fifo_1.data, (uint8_t) (rx_element_fifo_1.R1.bit.DLC));
+		//ulog_s("\r\n\r\n");
 	}
 	if ((status & CAN_PROTOCOL_ERROR_ARBITRATION)
 		|| (status & CAN_PROTOCOL_ERROR_DATA)) {
-		can_clear_interrupt_status(can_instance_glbl, CAN_PROTOCOL_ERROR_ARBITRATION
-												  | CAN_PROTOCOL_ERROR_DATA);
-		ulog_s("Protocol error, please double check the clock in two boards. \r\n\r\n");
+		can_clear_interrupt_status(can_instance_0, CAN_PROTOCOL_ERROR_ARBITRATION
+												   | CAN_PROTOCOL_ERROR_DATA);
+		//ulog_s("Protocol error, please double check the clock in two boards. \r\n\r\n");
 	}
 
 }
-
 
 
 void CAN1_Handler(void) {
 
-	ulog_s("received data on CAN1");
+	// not used, just to prevent errors
+	struct can_module *can_instance_1;
+
+
+	// Define CAN standard receive message setting.
+	static volatile uint32_t standard_receive_index = 0;
+	static volatile uint32_t extended_receive_index = 0;
+	static struct can_rx_element_fifo_0 rx_element_fifo_0;
+	static struct can_rx_element_fifo_1 rx_element_fifo_1;
+
 	SETBIT(CAN_flags, MSG_WAITING);
 
 	volatile uint32_t status, rx_buffer_index;
-	status = can_read_interrupt_status(can_instance_glbl);
+	status = can_read_interrupt_status(can_instance_1);
 	if (status & CAN_RX_FIFO_0_NEW_MESSAGE) {
-		can_clear_interrupt_status(can_instance_glbl, CAN_RX_FIFO_0_NEW_MESSAGE);
-		can_get_rx_fifo_0_element(can_instance_glbl, &rx_element_fifo_0,
+		can_clear_interrupt_status(can_instance_1, CAN_RX_FIFO_0_NEW_MESSAGE);
+		can_get_rx_fifo_0_element(can_instance_1, &rx_element_fifo_0,
 								  standard_receive_index);
-		can_rx_fifo_acknowledge(can_instance_glbl, 0,
+		can_rx_fifo_acknowledge(can_instance_1, 0,
 								standard_receive_index);
 		standard_receive_index++;
 		if (standard_receive_index == CONF_CAN0_RX_FIFO_0_NUM) {
 			standard_receive_index = 0;
 		}
-		ulog_s("\n\r Standard message received in FIFO 0. The received data is: \r\n");
-		xlog(rx_element_fifo_0.data, (uint8_t) (rx_element_fifo_0.R1.bit.DLC));
-		ulog_s("\r\n\r\n");
+		//ulog_s("\n\r Standard message received in FIFO 0. The received data is: \r\n");
+		//xlog(rx_element_fifo_0.data, (uint8_t) (rx_element_fifo_0.R1.bit.DLC));
+		//ulog_s("\r\n\r\n");
 	}
 	if (status & CAN_RX_FIFO_1_NEW_MESSAGE) {
-		can_clear_interrupt_status(can_instance_glbl, CAN_RX_FIFO_1_NEW_MESSAGE);
-		can_get_rx_fifo_1_element(can_instance_glbl, &rx_element_fifo_1,
+		can_clear_interrupt_status(can_instance_1, CAN_RX_FIFO_1_NEW_MESSAGE);
+		can_get_rx_fifo_1_element(can_instance_1, &rx_element_fifo_1,
 								  extended_receive_index);
-		can_rx_fifo_acknowledge(can_instance_glbl, 0,
+		can_rx_fifo_acknowledge(can_instance_1, 1,
 								extended_receive_index);
 		extended_receive_index++;
 		if (extended_receive_index == CONF_CAN0_RX_FIFO_1_NUM) {
 			extended_receive_index = 0;
 		}
-		ulog_s("\n\r Extended message received in FIFO 1. The received data is: \r\n");
-		xlog(rx_element_fifo_1.data, (uint8_t) (rx_element_fifo_1.R1.bit.DLC));
-		ulog_s("\r\n\r\n");
+		//ulog_s("\n\r Extended message received in FIFO 1. The received data is: \r\n");
+		//xlog(rx_element_fifo_1.data, (uint8_t) (rx_element_fifo_1.R1.bit.DLC));
+		//ulog_s("\r\n\r\n");
 	}
 	if ((status & CAN_PROTOCOL_ERROR_ARBITRATION)
 		|| (status & CAN_PROTOCOL_ERROR_DATA)) {
-		can_clear_interrupt_status(can_instance_glbl, CAN_PROTOCOL_ERROR_ARBITRATION
-													  | CAN_PROTOCOL_ERROR_DATA);
-		ulog_s("Protocol error, please double check the clock in two boards. \r\n\r\n");
+		can_clear_interrupt_status(can_instance_1, CAN_PROTOCOL_ERROR_ARBITRATION
+												   | CAN_PROTOCOL_ERROR_DATA);
+		//ulog_s("Protocol error, please double check the clock in two boards. \r\n\r\n");
 	}
 }
 
 
-TaskHandle_t vCreateCanTask(usart_module_t *p_usart_instance, struct can_module *p_can_instance) {
+TaskHandle_t vCreateCanTask(cantask_params *params) {
 
-	usart_instance = p_usart_instance;
-	can_instance_glbl = p_can_instance;
 
 	ulog_s("creating CAN Task...\r\n");
 
@@ -876,7 +900,7 @@ TaskHandle_t vCreateCanTask(usart_module_t *p_usart_instance, struct can_module 
 			vCanTask,       /* Function that implements the task. */
 			"canTASK",          /* Text name for the task. */
 			250,      /* Stack size in words, not bytes. */
-			NULL,    /* Parameter passed into the task. */
+			params,    /* Parameter passed into the task. */
 			tskIDLE_PRIORITY + 5,/* Priority at which the task is created. */
 			&xHandle);      /* Used to pass out the created task's handle. */
 

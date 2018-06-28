@@ -8,7 +8,12 @@
 #ifndef SAMC_FREERTOS_CAN_TASK_H
 #define SAMC_FREERTOS_CAN_TASK_H
 
-TaskHandle_t vCreateCanTask(usart_module_t *p_usart_instance, struct can_module *can_instance);
+typedef struct {
+	usart_module_t *usart_instance;
+	struct can_module *can_instance;
+} cantask_params;
+
+TaskHandle_t vCreateCanTask(cantask_params *params);
 
 /*
  *
@@ -31,12 +36,6 @@ TaskHandle_t vCreateCanTask(usart_module_t *p_usart_instance, struct can_module 
 #define CAN_TX_BUFFER_INDEX    0
 static uint8_t tx_message_0[CONF_CAN_ELEMENT_DATA_SIZE];
 static uint8_t tx_message_1[CONF_CAN_ELEMENT_DATA_SIZE];
-
-// Define CAN standard receive message setting.
-static volatile uint32_t standard_receive_index = 0;
-static volatile uint32_t extended_receive_index = 0;
-static struct can_rx_element_fifo_0 rx_element_fifo_0;
-static struct can_rx_element_fifo_1 rx_element_fifo_1;
 
 #define HW_VER        0x30		// hardware version
 #define SW_VER        0x40		// software version
