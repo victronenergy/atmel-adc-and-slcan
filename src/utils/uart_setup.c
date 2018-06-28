@@ -4,23 +4,6 @@
 
 #include <samc21_usbcan/samc21_usbcan.h>
 #include "uart_setup.h"
-//#include "samc21_xplained_pro_DBL.h"
-
-/*
-void configure_log_uart(usart_module_t *usart_module) {
-    struct usart_config config_usart;
-    usart_get_config_defaults(&config_usart);
-    config_usart.baudrate = 57600;
-    config_usart.generator_source = GCLK_GENERATOR_1;
-    config_usart.mux_setting = DEBUG_SERCOM_MUX_SETTING;
-    config_usart.pinmux_pad0 = DEBUG_SERCOM_PINMUX_PAD0;
-    config_usart.pinmux_pad1 = DEBUG_SERCOM_PINMUX_PAD1;
-    config_usart.pinmux_pad2 = DEBUG_SERCOM_PINMUX_PAD2;
-    config_usart.pinmux_pad3 = DEBUG_SERCOM_PINMUX_PAD3;
-    while (usart_init(usart_module, DEBUG_MODULE, &config_usart) != STATUS_OK) {}
-    usart_enable(usart_module);
-}*/
-
 
 void configure_log_uart(usart_module_t *usart_module) {
     struct usart_config config_usart;
@@ -118,7 +101,7 @@ void configure_can1(struct can_module *can_instance){
 
 	can_start(can_instance);
 	/* Enable interrupts for this CAN module */
-	system_interrupt_enable(SYSTEM_INTERRUPT_MODULE_CAN0);
+	system_interrupt_enable(SYSTEM_INTERRUPT_MODULE_CAN1);
 	can_enable_interrupt(can_instance, CAN_PROTOCOL_ERROR_ARBITRATION | CAN_PROTOCOL_ERROR_DATA);
 
 

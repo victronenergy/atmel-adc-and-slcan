@@ -773,6 +773,7 @@ void init_can_mem() {
 
 void CAN0_Handler(void) {
 
+	ulog_s("received data on CAN0");
 	SETBIT(CAN_flags, MSG_WAITING);
 
 	volatile uint32_t status, rx_buffer_index;
@@ -812,6 +813,51 @@ void CAN0_Handler(void) {
 		ulog_s("Protocol error, please double check the clock in two boards. \r\n\r\n");
 	}
 
+}
+
+
+
+void CAN1_Handler(void) {
+
+	ulog_s("received data on CAN1");
+	SETBIT(CAN_flags, MSG_WAITING);
+
+	volatile uint32_t status, rx_buffer_index;
+	status = can_read_interrupt_status(can_instance_glbl);
+	if (status & CAN_RX_FIFO_0_NEW_MESSAGE) {
+		can_clear_interrupt_status(can_instance_glbl, CAN_RX_FIFO_0_NEW_MESSAGE);
+		can_get_rx_fifo_0_element(can_instance_glbl, &rx_element_fifo_0,
+								  standard_receive_index);
+		can_rx_fifo_acknowledge(can_instance_glbl, 0,
+								standard_receive_index);
+		standard_receive_index++;
+		if (standard_receive_index == CONF_CAN0_RX_FIFO_0_NUM) {
+			standard_receive_index = 0;
+		}
+		ulog_s("\n\r Standard message received in FIFO 0. The received data is: \r\n");
+		xlog(rx_element_fifo_0.data, (uint8_t) (rx_element_fifo_0.R1.bit.DLC));
+		ulog_s("\r\n\r\n");
+	}
+	if (status & CAN_RX_FIFO_1_NEW_MESSAGE) {
+		can_clear_interrupt_status(can_instance_glbl, CAN_RX_FIFO_1_NEW_MESSAGE);
+		can_get_rx_fifo_1_element(can_instance_glbl, &rx_element_fifo_1,
+								  extended_receive_index);
+		can_rx_fifo_acknowledge(can_instance_glbl, 0,
+								extended_receive_index);
+		extended_receive_index++;
+		if (extended_receive_index == CONF_CAN0_RX_FIFO_1_NUM) {
+			extended_receive_index = 0;
+		}
+		ulog_s("\n\r Extended message received in FIFO 1. The received data is: \r\n");
+		xlog(rx_element_fifo_1.data, (uint8_t) (rx_element_fifo_1.R1.bit.DLC));
+		ulog_s("\r\n\r\n");
+	}
+	if ((status & CAN_PROTOCOL_ERROR_ARBITRATION)
+		|| (status & CAN_PROTOCOL_ERROR_DATA)) {
+		can_clear_interrupt_status(can_instance_glbl, CAN_PROTOCOL_ERROR_ARBITRATION
+													  | CAN_PROTOCOL_ERROR_DATA);
+		ulog_s("Protocol error, please double check the clock in two boards. \r\n\r\n");
+	}
 }
 
 

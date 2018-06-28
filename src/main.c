@@ -36,9 +36,9 @@ int main(void) {
 	configure_log_uart(&debug_ulog);
 
 	configure_can0(&can0_instance);
+	configure_can1(&can1_instance);
 
 	configure_usbcan0(&usbcan0_instance);
-
 	configure_usbcan1(&usbcan1_instance);
 
 	/*
@@ -54,23 +54,12 @@ int main(void) {
 	configure_ulog(&debug_ulog);
 	ulog_s("prepare Tasks\r\n");
 	TaskHandle_t task_handles[1];
-	TaskHandle_t can_task = vCreateCanTask(&usbcan0_instance, &can0_instance);
-	task_handles[0] = &can_task;
+	TaskHandle_t can_task0 = vCreateCanTask(&usbcan0_instance, &can0_instance);
+	//TaskHandle_t can_task1 = vCreateCanTask(&usbcan1_instance, &can1_instance);
+	task_handles[0] = &can_task0;
+	//task_handles[1] = &can_task1;
 	vCreateStackTask((TaskHandle_t **) &task_handles, 1);
 
-/*	while(1){
-
-		delay_ms(1000);
-
-		port_pin_toggle_output_level(PIN_PA13);
-		port_pin_toggle_output_level(PIN_PA12);
-
-
-		ulog_s("yalla\r\n");
-		usart_write_buffer_wait(&usbcan0_instance, (const uint8_t *)"\r\nTEST0:", 8);
-		usart_write_buffer_wait(&usbcan1_instance, (const uint8_t *)"\r\nTEST1:", 8);
-	}
-*/
 	ulog_s("start scheduler\r\n");
 	vTaskStartScheduler();
 
