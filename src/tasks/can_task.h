@@ -9,6 +9,7 @@
 #define SAMC_FREERTOS_CAN_TASK_H
 
 typedef struct {
+	uint8_t task_id;
 	usart_module_t *usart_instance;
 	struct can_module *can_instance;
 } cantask_params;

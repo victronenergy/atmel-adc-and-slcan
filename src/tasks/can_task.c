@@ -6,6 +6,7 @@
 #include "can_task.h"
 #include "usb.h"
 #include <ctype.h>
+#include <samc21_usbcan/samc21_usbcan.h>
 
 #define PeliCANMode
 
@@ -54,7 +55,8 @@
 
 // TODO END
 
-
+#define STANDARD_FRAME 0
+#define EXTENDED_FRAME 1
 
 uint8_t uart_rx_buffer[UART_RX_BUFSIZE];
 
@@ -77,16 +79,6 @@ struct {
 	uint8_t data[8];        // Data Bytes
 } CAN_tx_msg;                // length 15 byte
 
-// CAN rx message
-struct {
-	uint8_t format;        // Extended/Standard Frame
-	uint32_t id;            // Frame ID
-	uint8_t rtr;            // RTR/Data Frame
-	uint8_t len;            // Data Length
-	uint8_t data[8];        // Data Bytes
-} CAN_rx_msg;                  // length 15 byte/each
-
-
 
 
 
@@ -95,7 +87,7 @@ volatile uint8_t last_ecr;
 volatile uint8_t last_alc;
 
 
-uint8_t data[8] = {0x01};
+uint8_t can_txdata_exp[8] = {0x01};
 
 /*
  * Prototypes
@@ -167,11 +159,14 @@ static void can_send_standard_message(struct can_module *const can_instance, uin
 	can_tx_transfer_request(can_instance, 1 << CAN_TX_BUFFER_INDEX);
 }
 
-void usart_read_callback(struct usart_module *const usart_instance) {
-	char *string = "read callback";
-	usart_write_buffer_job(usart_instance, (uint8_t *) string, strlen(string));
-	//usart_write_buffer_job(usart_instance, (uint8_t *)uart_rx_buffer, UART_RX_BUFSIZE);
-	//port_pin_toggle_output_level(LED_0_PIN);
+
+void usart_read_callback(struct usart_module *const usart_module) {
+
+	//char *string = "read callback";
+	//usart_write_buffer_job(usart_instance, (uint8_t *) string, strlen(string));
+	//usart_write_buffer_job(usart_module, (uint8_t *)uart_rx_buffer, UART_RX_BUFSIZE);
+//	port_pin_toggle_output_level(LEDPIN_C21_1);
+	port_pin_set_output_level(LEDPIN_C21_1, false);
 }
 
 void usart_write_callback(struct usart_module *const usart_module) {
@@ -183,9 +178,8 @@ void configure_usart_callbacks(usart_module_t *usart_instance) {
 							usart_write_callback, USART_CALLBACK_BUFFER_TRANSMITTED);
 	usart_register_callback(usart_instance,
 							usart_read_callback, USART_CALLBACK_BUFFER_RECEIVED);
-	usart_enable_callback(usart_instance,
-						  USART_CALLBACK_BUFFER_TRANSMITTED);
-	usart_enable_callback(usart_instance, USART_CALLBACK_BUFFER_RECEIVED);
+	//usart_enable_callback(usart_instance, USART_CALLBACK_BUFFER_TRANSMITTED);
+	//usart_enable_callback(usart_instance, USART_CALLBACK_BUFFER_RECEIVED);
 }
 
 
@@ -194,15 +188,23 @@ void configure_usart_callbacks(usart_module_t *usart_instance) {
 
 void vCanTask(void *pvParameters) {
 
-	cantask_params *params = (cantask_params *) pvParameters;
+	// CAN rx message
+	struct {
+		uint8_t format;        // Extended/Standard Frame
+		uint32_t id;            // Frame ID
+		uint8_t rtr;            // RTR/Data Frame
+		uint8_t len;            // Data Length
+		uint8_t data[8];        // Data Bytes
+	} CAN_rx_msg;                  // length 15 byte/each
 
+
+	cantask_params *params = (cantask_params *) pvParameters;
 
 	// Define CAN standard receive message setting.
 	static volatile uint32_t standard_receive_index = 0;
 	static volatile uint32_t extended_receive_index = 0;
 	static struct can_rx_element_fifo_0 rx_element_fifo_0;
 	static struct can_rx_element_fifo_1 rx_element_fifo_1;
-
 
 	ulog_s("cantask begin loop\r\n");
 
@@ -219,33 +221,88 @@ void vCanTask(void *pvParameters) {
 
 	init_can_mem();
 
+	uint8_t conf_CAN_RX_FIFO_0_NUM = CONF_CAN0_RX_FIFO_0_NUM;
+	uint8_t conf_CAN_RX_FIFO_1_NUM = CONF_CAN0_RX_FIFO_1_NUM;
+	if (params->task_id == 1) {
+		conf_CAN_RX_FIFO_0_NUM = CONF_CAN1_RX_FIFO_0_NUM;
+		conf_CAN_RX_FIFO_1_NUM = CONF_CAN1_RX_FIFO_1_NUM;
+	}
+
 	configure_usart_callbacks(params->usart_instance);
 
 	//TODO prepare CAN interface
 
 	ulog_s("\r\n");
 
-	//can_enable_interrupt(can_instance_0, CAN_RX_FIFO_0_NEW_MESSAGE);
-	//can_enable_interrupt(can_instance_0, CAN_RX_FIFO_1_NEW_MESSAGE);
-
 	for (;;) {
 		vTaskDelay((const TickType_t) 1000);
 		//port_pin_toggle_output_level(LED_0_PIN);
 
-		// TODO perform CAN task
+		//uint8_t string[] = "senddatatopc\r\n";
+		//usart_write_buffer_wait(params->usart_instance, string, sizeof(string));
 
-		//usart_read_buffer_wait(params->usart_instance, uart_rx_buffer, 1);
+/*		while (1) {
+		usart_read_buffer_wait(params->usart_instance, uart_rx_buffer, 1);
 
+		ulog(uart_rx_buffer, 1);
+
+		}*/
 		//uint8_t string[] = "senddatatopc\r\n";
 		//usart_write_buffer_wait(params->usart_instance, string, sizeof(string));
 
 
-		uint32_t status = can_read_interrupt_status(params->can_instance);
-		if (status & CAN_RX_FIFO_1_NEW_MESSAGE) {
-				can_clear_interrupt_status(params->can_instance, CAN_RX_FIFO_1_NEW_MESSAGE);
-				SETBIT(CAN_flags, MSG_WAITING);
-		}
+		//standard frame
+		volatile uint32_t status = can_read_interrupt_status(params->can_instance);
+		if (status & CAN_RX_FIFO_0_NEW_MESSAGE) {
+			can_clear_interrupt_status(params->can_instance, CAN_RX_FIFO_0_NEW_MESSAGE);
+			SETBIT(CAN_flags, MSG_WAITING);
 
+			can_get_rx_fifo_0_element(params->can_instance, &rx_element_fifo_0,
+									  standard_receive_index);
+			can_rx_fifo_acknowledge(params->can_instance, 0,
+									standard_receive_index);
+			standard_receive_index++;
+
+
+			if (standard_receive_index == conf_CAN_RX_FIFO_0_NUM) {
+				standard_receive_index = 0;
+			}
+
+			CAN_rx_msg.format = STANDARD_FRAME;
+
+			//memcpy(CAN_rx_msg.data, rx_element_fifo_0.data, (uint8_t) rx_element_fifo_0.R1.bit.DLC);
+			//ulog_s("\n\r Standard message received in FIFO 0. The received data is: \r\n");
+			//xlog(rx_element_fifo_0.data, (uint8_t) (rx_element_fifo_0.R1.bit.DLC));
+			//ulog_s("\r\n\r\n");
+
+		}
+		if (status & CAN_RX_FIFO_1_NEW_MESSAGE) {
+			can_clear_interrupt_status(params->can_instance, CAN_RX_FIFO_1_NEW_MESSAGE);
+			SETBIT(CAN_flags, MSG_WAITING);
+
+			can_get_rx_fifo_1_element(params->can_instance, &rx_element_fifo_1,
+									  extended_receive_index);
+			can_rx_fifo_acknowledge(params->can_instance, 1,
+									extended_receive_index);
+			extended_receive_index++;
+			if (extended_receive_index == conf_CAN_RX_FIFO_1_NUM) {
+				extended_receive_index = 0;
+			}
+
+			CAN_rx_msg.format = EXTENDED_FRAME;
+
+			//memcpy(CAN_rx_msg.data, rx_element_fifo_1.data, (uint8_t) rx_element_fifo_1.R1.bit.DLC);
+			//ulog_s("\n\r Extended message received in FIFO 1. The received data is: \r\n");
+			//xlog(rx_element_fifo_1.data, (uint8_t) (rx_element_fifo_1.R1.bit.DLC));
+			//ulog_s("\r\n\r\n");
+
+		}
+		if ((status & CAN_PROTOCOL_ERROR_ARBITRATION)
+			|| (status & CAN_PROTOCOL_ERROR_DATA)) {
+			can_clear_interrupt_status(params->can_instance, CAN_PROTOCOL_ERROR_ARBITRATION
+															 | CAN_PROTOCOL_ERROR_DATA);
+			ulog_s("Protocol error, please double check the clock in two boards. \r\n\r\n");
+		}
 
 
 		if (CHECKBIT(CAN_flags, MSG_WAITING)) {
@@ -754,7 +811,7 @@ uint8_t exec_usb_cmd(usart_module_t *usart_instance, struct can_module *can_inst
 			//TODO remove the following case
 		case 'Q':
 			ulog_s("Q testing case\r\n");
-			can_send_standard_message(can_instance, CAN_RX_STANDARD_FILTER_ID_0, data);
+			can_send_standard_message(can_instance, CAN_RX_STANDARD_FILTER_ID_0, can_txdata_exp);
 
 
 			return CR;
@@ -780,115 +837,7 @@ void init_can_mem() {
 }
 
 
-void CAN0_Handler(void) {
-
-	// not used, just to prevent errors
-	struct can_module *can_instance_0;
-
-
-	// Define CAN standard receive message setting.
-	static volatile uint32_t standard_receive_index = 0;
-	static volatile uint32_t extended_receive_index = 0;
-	static struct can_rx_element_fifo_0 rx_element_fifo_0;
-	static struct can_rx_element_fifo_1 rx_element_fifo_1;
-
-	SETBIT(CAN_flags, MSG_WAITING);
-
-	volatile uint32_t status, rx_buffer_index;
-	status = can_read_interrupt_status(can_instance_0);
-	if (status & CAN_RX_FIFO_0_NEW_MESSAGE) {
-		can_clear_interrupt_status(can_instance_0, CAN_RX_FIFO_0_NEW_MESSAGE);
-		can_get_rx_fifo_0_element(can_instance_0, &rx_element_fifo_0,
-								  standard_receive_index);
-		can_rx_fifo_acknowledge(can_instance_0, 0,
-								standard_receive_index);
-		standard_receive_index++;
-		if (standard_receive_index == CONF_CAN0_RX_FIFO_0_NUM) {
-			standard_receive_index = 0;
-		}
-		//ulog_s("\n\r Standard message received in FIFO 0. The received data is: \r\n");
-		//xlog(rx_element_fifo_0.data, (uint8_t) (rx_element_fifo_0.R1.bit.DLC));
-		//ulog_s("\r\n\r\n");
-	}
-	if (status & CAN_RX_FIFO_1_NEW_MESSAGE) {
-		can_clear_interrupt_status(can_instance_0, CAN_RX_FIFO_1_NEW_MESSAGE);
-		can_get_rx_fifo_1_element(can_instance_0, &rx_element_fifo_1,
-								  extended_receive_index);
-		can_rx_fifo_acknowledge(can_instance_0, 1,
-								extended_receive_index);
-		extended_receive_index++;
-		if (extended_receive_index == CONF_CAN0_RX_FIFO_1_NUM) {
-			extended_receive_index = 0;
-		}
-		//ulog_s("\n\r Extended message received in FIFO 1. The received data is: \r\n");
-		//xlog(rx_element_fifo_1.data, (uint8_t) (rx_element_fifo_1.R1.bit.DLC));
-		//ulog_s("\r\n\r\n");
-	}
-	if ((status & CAN_PROTOCOL_ERROR_ARBITRATION)
-		|| (status & CAN_PROTOCOL_ERROR_DATA)) {
-		can_clear_interrupt_status(can_instance_0, CAN_PROTOCOL_ERROR_ARBITRATION
-												   | CAN_PROTOCOL_ERROR_DATA);
-		//ulog_s("Protocol error, please double check the clock in two boards. \r\n\r\n");
-	}
-
-}
-
-
-void CAN1_Handler(void) {
-
-	// not used, just to prevent errors
-	struct can_module *can_instance_1;
-
-
-	// Define CAN standard receive message setting.
-	static volatile uint32_t standard_receive_index = 0;
-	static volatile uint32_t extended_receive_index = 0;
-	static struct can_rx_element_fifo_0 rx_element_fifo_0;
-	static struct can_rx_element_fifo_1 rx_element_fifo_1;
-
-	SETBIT(CAN_flags, MSG_WAITING);
-
-	volatile uint32_t status, rx_buffer_index;
-	status = can_read_interrupt_status(can_instance_1);
-	if (status & CAN_RX_FIFO_0_NEW_MESSAGE) {
-		can_clear_interrupt_status(can_instance_1, CAN_RX_FIFO_0_NEW_MESSAGE);
-		can_get_rx_fifo_0_element(can_instance_1, &rx_element_fifo_0,
-								  standard_receive_index);
-		can_rx_fifo_acknowledge(can_instance_1, 0,
-								standard_receive_index);
-		standard_receive_index++;
-		if (standard_receive_index == CONF_CAN0_RX_FIFO_0_NUM) {
-			standard_receive_index = 0;
-		}
-		//ulog_s("\n\r Standard message received in FIFO 0. The received data is: \r\n");
-		//xlog(rx_element_fifo_0.data, (uint8_t) (rx_element_fifo_0.R1.bit.DLC));
-		//ulog_s("\r\n\r\n");
-	}
-	if (status & CAN_RX_FIFO_1_NEW_MESSAGE) {
-		can_clear_interrupt_status(can_instance_1, CAN_RX_FIFO_1_NEW_MESSAGE);
-		can_get_rx_fifo_1_element(can_instance_1, &rx_element_fifo_1,
-								  extended_receive_index);
-		can_rx_fifo_acknowledge(can_instance_1, 1,
-								extended_receive_index);
-		extended_receive_index++;
-		if (extended_receive_index == CONF_CAN0_RX_FIFO_1_NUM) {
-			extended_receive_index = 0;
-		}
-		//ulog_s("\n\r Extended message received in FIFO 1. The received data is: \r\n");
-		//xlog(rx_element_fifo_1.data, (uint8_t) (rx_element_fifo_1.R1.bit.DLC));
-		//ulog_s("\r\n\r\n");
-	}
-	if ((status & CAN_PROTOCOL_ERROR_ARBITRATION)
-		|| (status & CAN_PROTOCOL_ERROR_DATA)) {
-		can_clear_interrupt_status(can_instance_1, CAN_PROTOCOL_ERROR_ARBITRATION
-												   | CAN_PROTOCOL_ERROR_DATA);
-		//ulog_s("Protocol error, please double check the clock in two boards. \r\n\r\n");
-	}
-}
-
-
 TaskHandle_t vCreateCanTask(cantask_params *params) {
-
 
 	ulog_s("creating CAN Task...\r\n");
 

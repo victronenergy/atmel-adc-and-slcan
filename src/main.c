@@ -41,11 +41,13 @@ int main(void) {
 	configure_usbcan0(&usbcan0_instance);
 	configure_usbcan1(&usbcan1_instance);
 
-	cantask_params params_task0;
+	volatile cantask_params params_task0;
+	params_task0.task_id = 0;
 	params_task0.usart_instance = &usbcan0_instance;
 	params_task0.can_instance = &can0_instance;
 
-	cantask_params params_task1;
+	volatile cantask_params params_task1;
+	params_task0.task_id = 1;
 	params_task1.usart_instance = &usbcan1_instance;
 	params_task1.can_instance = &can1_instance;
 
