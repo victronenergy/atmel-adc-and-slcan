@@ -16,6 +16,9 @@ typedef struct {
 
 TaskHandle_t vCreateCanTask(cantask_params *params);
 
+#define CANTASK_ID_0 0
+#define CANTASK_ID_1 1
+
 /*
  *
  * ASF CAN example

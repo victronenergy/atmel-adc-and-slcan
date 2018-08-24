@@ -129,7 +129,7 @@
 #  define CONF_CLOCK_GCLK_1_ENABLE                true
 #  define CONF_CLOCK_GCLK_1_RUN_IN_STANDBY        true
 #  define CONF_CLOCK_GCLK_1_CLOCK_SOURCE          SYSTEM_CLOCK_SOURCE_OSC48M
-#  define CONF_CLOCK_GCLK_1_PRESCALER             8								// this will generate 6MHz clock
+#  define CONF_CLOCK_GCLK_1_PRESCALER             2								// this will generate 6MHz clock
 #  define CONF_CLOCK_GCLK_1_OUTPUT_ENABLE         false
 
 /* Configure GCLK generator 2  */

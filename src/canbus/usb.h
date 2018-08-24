@@ -49,5 +49,6 @@ void usb_putc (usart_module_t *usart_instance, uint8_t tx_byte);
 void usb_byte2ascii (usart_module_t *usart_instance, uint8_t tx_byte);
 uint8_t ascii2byte (uint8_t * val);
 void usb_puts (usart_module_t *usart_instance, uint8_t * tx_string);
+void usb_send(struct usart_module *const module);
 
 #endif // __USB_H__
