@@ -167,27 +167,7 @@ static void can_send_standard_message(struct can_module *const can_instance, uin
 	can_tx_transfer_request(can_instance, 1 << CAN_TX_BUFFER_INDEX);
 }
 
-void usart_read_callback(struct usart_module *const usart_module) {
 
-	//char *string = "read callback";
-	//usart_write_buffer_job(usart_instance, (uint8_t *) string, strlen(string));
-	//usart_write_buffer_job(usart_module, (uint8_t *)uart_rx_buffer, UART_RX_BUFSIZE);
-//	port_pin_toggle_output_level(LEDPIN_C21_1);
-	port_pin_set_output_level(LEDPIN_C21_1, false);
-}
-
-void usart_write_callback(struct usart_module *const usart_module) {
-	//port_pin_toggle_output_level(LED_0_PIN);
-}
-
-void configure_usart_callbacks(usart_module_t *usart_instance) {
-	usart_register_callback(usart_instance,
-							usart_write_callback, USART_CALLBACK_BUFFER_TRANSMITTED);
-	usart_register_callback(usart_instance,
-							usart_read_callback, USART_CALLBACK_BUFFER_RECEIVED);
-	//usart_enable_callback(usart_instance, USART_CALLBACK_BUFFER_TRANSMITTED);
-	//usart_enable_callback(usart_instance, USART_CALLBACK_BUFFER_RECEIVED);
-}
 
 
 #pragma clang diagnostic push
@@ -207,45 +187,61 @@ bool handle_rx_can_msg(struct can_module *const module_inst, struct CAN_rx_msg_s
 	uint32_t fifo1_fill_level = (uint32_t) fifo1_status.bit.F1FL;
 
 	volatile uint32_t status = can_read_interrupt_status(module_inst);
-	static volatile uint32_t standard_receive_index = 0;
-	static volatile uint32_t extended_receive_index = 0;
+	if ((status & CAN_PROTOCOL_ERROR_ARBITRATION)
+		|| (status & CAN_PROTOCOL_ERROR_DATA)) {
+		port_pin_set_output_level(LEDPIN_C21_RED, LED_ACTIVE);
+		can_clear_interrupt_status(module_inst, CAN_PROTOCOL_ERROR_ARBITRATION
+												| CAN_PROTOCOL_ERROR_DATA);
+		ulog_s("Protocol error, please double check the clock in two boards. \r\n\r\n");
+	}
+
+	bool checkboth = false;
+
 	// fifo0 is used for standard messages
-	static struct can_rx_element_fifo_0 rx_element_fifo_0;
-	// fifo1 is used for extended messages
-	static struct can_rx_element_fifo_1 rx_element_fifo_1;
-	//standard frame
 	if(fifo0_fill_level) {
-		//ulog_s("standard message received");
-		//can_clear_interrupt_status(module_inst, CAN_RX_FIFO_0_NEW_MESSAGE);
+		checkboth = true;
+
 		SETBIT(CAN_flags, MSG_WAITING);
-		//can_rx_get_fifo_status()
+
+		if(fifo0_status.bit.RF0L){
+			ulog_s("message lost!F0\r\n");
+		}
+		if(fifo0_status.bit.F0F){
+			ulog_s("FIFO full!F0\r\n");
+		}
+
+
 
 		uint32_t fifo0_getindex = (uint32_t) fifo0_status.bit.F0GI;
+		struct can_rx_element_fifo_0 rx_element_fifo_0;
 
 		can_get_rx_fifo_0_element(module_inst, &rx_element_fifo_0,
 								  fifo0_getindex);
 		can_rx_fifo_acknowledge(module_inst, 0,
-								standard_receive_index);
-		standard_receive_index++;
-
-		if (standard_receive_index == conf_CAN_RX_FIFO_0_NUM) {
-			standard_receive_index = 0;
-		}
+								fifo0_getindex);
 
 		CAN_rx_msg->format = STANDARD_FRAME;
 		CAN_rx_msg->id = rx_element_fifo_0.R0.bit.ID;
 		CAN_rx_msg->rtr = (uint8_t) rx_element_fifo_0.R0.bit.RTR;
 		CAN_rx_msg->len = rx_element_fifo_0.R1.bit.DLC;
 		memcpy(CAN_rx_msg->data, rx_element_fifo_0.data, CAN_rx_msg->len);
-
-		//ulog_s("\n\r Standard message received in FIFO 0. The received data is: \r\n");
-		//xlog(CAN_rx_msg->data, (uint8_t) CAN_rx_msg->len);*/
-		ulog_s("new1\r\n");
 	}
 	if (fifo1_fill_level) {
+		if(checkboth){
+			ulog_s("received both standard and extended data.\r\nCaution: standard data is currently overwritten");
+		}
 		SETBIT(CAN_flags, MSG_WAITING);
-		uint32_t fifo1_getindex = (uint32_t) fifo1_status.bit.F1GI;
 
+		if(fifo1_status.bit.RF1L){
+			ulog_s("message lost!F1\r\n");
+		}
+		if(fifo1_status.bit.F1F){
+			ulog_s("FIFO full!F1\r\n");
+		}
+
+		// fifo1 is used for extended messages
+		uint32_t fifo1_getindex = (uint32_t) fifo1_status.bit.F1GI;
+		static struct can_rx_element_fifo_1 rx_element_fifo_1;
 		can_get_rx_fifo_1_element(module_inst, &rx_element_fifo_1,
 								  fifo1_getindex);
 
@@ -257,19 +253,9 @@ bool handle_rx_can_msg(struct can_module *const module_inst, struct CAN_rx_msg_s
 		CAN_rx_msg->rtr = (uint8_t) rx_element_fifo_1.R0.bit.RTR;
 		CAN_rx_msg->len = rx_element_fifo_1.R1.bit.DLC;
 		memcpy(CAN_rx_msg->data, rx_element_fifo_1.data, CAN_rx_msg->len);
-
-		//ulog_s("\n\rExtended message received in FIFO 1. The received data is: \r\n");
-		//xlog(CAN_rx_msg->data, (uint8_t) CAN_rx_msg->len);
 	}
-
-
-	if ((status & CAN_PROTOCOL_ERROR_ARBITRATION)
-		|| (status & CAN_PROTOCOL_ERROR_DATA)) {
-		can_clear_interrupt_status(module_inst, CAN_PROTOCOL_ERROR_ARBITRATION
-												| CAN_PROTOCOL_ERROR_DATA);
-		//ulog_s("Protocol error, please double check the clock in two boards. \r\n\r\n");
-	}
-	//ulog_s("\r\n\r\n");
+	//xlog(CAN_rx_msg)
+	//ulog_s("\r\n");
 }
 
 /*
@@ -302,13 +288,12 @@ void vCanTask(void *pvParameters) {
 
 	// Define CAN receive message setting
 
-
 	//ulog_s("cantask begin loop\r\n");
 
 	vTaskDelay((const TickType_t) 10);
 
 	// later stores single (cmd) byte received via USB
-	uint8_t usb_rx_char;
+	uint16_t usb_rx_char;
 
 	// cmd buffer stores cmd data to send via USB
 	uint8_t cmd_buf[CMD_BUFFER_LENGTH];
@@ -319,14 +304,18 @@ void vCanTask(void *pvParameters) {
 	init_can_mem();
 
 
+	//initially both LEDs off
+	port_pin_set_output_level(LEDPIN_C21_GREEN, LED_INACTIVE);
+	port_pin_set_output_level(LEDPIN_C21_RED, LED_INACTIVE);
+
 	configure_usart_callbacks(params->usart_instance);
 
 	//TODO prepare CAN interface
 
 	//ulog_s("\r\n");
-
+	struct CAN_rx_msg_struct CAN_rx_msg;
 	for (;;) {
-
+		port_pin_toggle_output_level(PIN_PA11);
 		//vTaskDelay((const TickType_t) 100);
 
 		//ulog_s("task:");
@@ -334,8 +323,8 @@ void vCanTask(void *pvParameters) {
 		//ulog_s("\r\n");
 
 		//receive data from CAN bus
-		struct CAN_rx_msg_struct CAN_rx_msg;
-		handle_rx_can_msg(params->can_instance,&CAN_rx_msg);
+
+		handle_rx_can_msg(params->can_instance, &CAN_rx_msg);
 
 
 		if (CHECKBIT(CAN_flags, MSG_WAITING)) {
@@ -388,28 +377,33 @@ void vCanTask(void *pvParameters) {
 			CLEARBIT(CAN_flags, MSG_WAITING);
 		}
 
+		uint8_t rbyte = 0;
+		check_usart(params->usart_instance, &usb_rx_char);
+		bool newdata = usb_getc(params->usart_instance, &rbyte);
 
-		//ulog_s("\r\n");
-		// read char from USB
-		usb_rx_char = usb_getc(params->usart_instance, uart_rx_buffer);    // check for new chars from USB
-		if (usb_rx_char == CR)    // check for end of command
-		{
+		if (newdata) {
+			xlog((uint8_t *) &usb_rx_char, 1);
+			rbyte = (uint8_t) usb_rx_char;
 
-			// Execute USB command and return status to terminal
-			usb_putc(params->usart_instance, exec_usb_cmd(params->usart_instance,
-														  params->can_instance, cmd_buf));
 
-			// flush command buffer
-			for (buf_ind = 0; buf_ind < CMD_BUFFER_LENGTH; buf_ind++)
-				cmd_buf[buf_ind] = 0x00;
+			if (rbyte == CR)    // check for end of command
+			{
+				// Execute USB command and return status to terminal
+				usb_putc(params->usart_instance, exec_usb_cmd(params->usart_instance,
+															  params->can_instance, cmd_buf));
 
-			buf_ind = 0;    // point to start of command
-		} else if (usb_rx_char != 0)    // store new char in buffer
-		{
-			cmd_buf[buf_ind] = usb_rx_char;    // store char
-			// check for buffer overflow
-			if (buf_ind < sizeof(cmd_buf) - 1)
-				buf_ind++;
+				// flush command buffer
+				for (buf_ind = 0; buf_ind < CMD_BUFFER_LENGTH; buf_ind++)
+					cmd_buf[buf_ind] = 0x00;
+
+				buf_ind = 0;    // point to start of command
+			} else if (rbyte != 0)    // store new char in buffer
+			{
+				cmd_buf[buf_ind] = (uint8_t)rbyte;    // store char
+				// check for buffer overflow
+				if (buf_ind < sizeof(cmd_buf) - 1)
+					buf_ind++;
+			}
 		}
 		usb_send(params->usart_instance);
 		flush_clog();
@@ -491,7 +485,7 @@ uint8_t exec_usb_cmd(usart_module_t *usart_instance, struct can_module *can_inst
 			usb_byte2ascii(usart_instance, (uint8_t) (CAN_flags >> 8));
 
 			// turn off Bus Error indication
-			// TODO replace: LED_PORT &= ~_BV(LED_RED);
+			port_pin_set_output_level(LEDPIN_C21_RED, LED_INACTIVE);
 			ulog_s("bus error indication turned off.\r\n");
 
 			// reset error flags
@@ -537,6 +531,7 @@ uint8_t exec_usb_cmd(usart_module_t *usart_instance, struct can_module *can_inst
 		case SET_BTR:
 			// set fix bitrate
 		case SET_BITRATE:
+			port_pin_set_output_level(LEDPIN_C21_RED, LED_INACTIVE);
 
 			//TODO remove these 2 cmds, used for testing only
 			*(cmd_buf_pntr + 1) = 5;

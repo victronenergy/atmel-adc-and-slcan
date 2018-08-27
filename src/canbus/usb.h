@@ -44,11 +44,13 @@
 #define USB_TXE  PD5		// FT245BM TXE pin
 #define USB_RXF  PE0		// FT245BM RXF pin
 
-uint8_t usb_getc (usart_module_t *usart_instance, uint8_t *uart_rx_buffer);
+
+bool usb_getc (usart_module_t *usart_instance, uint8_t *uart_rx_buffer);
 void usb_putc (usart_module_t *usart_instance, uint8_t tx_byte);
 void usb_byte2ascii (usart_module_t *usart_instance, uint8_t tx_byte);
 uint8_t ascii2byte (uint8_t * val);
 void usb_puts (usart_module_t *usart_instance, uint8_t * tx_string);
 void usb_send(struct usart_module *const module);
+bool check_usart(usart_module_t *usart_instance, uint16_t *rx_char);
 
 #endif // __USB_H__

@@ -73,7 +73,7 @@ void configure_can0(struct can_module *can_instance){
 	can_start(can_instance);
 	/* Enable interrupts for this CAN module */
 	system_interrupt_enable(SYSTEM_INTERRUPT_MODULE_CAN0);
-	can_enable_interrupt(can_instance, CAN_PROTOCOL_ERROR_ARBITRATION | CAN_PROTOCOL_ERROR_DATA);
+	//can_enable_interrupt(can_instance, CAN_PROTOCOL_ERROR_ARBITRATION | CAN_PROTOCOL_ERROR_DATA);
 
 
 }
@@ -102,7 +102,7 @@ void configure_can1(struct can_module *can_instance){
 	can_start(can_instance);
 	/* Enable interrupts for this CAN module */
 	system_interrupt_enable(SYSTEM_INTERRUPT_MODULE_CAN1);
-	can_enable_interrupt(can_instance, CAN_PROTOCOL_ERROR_ARBITRATION | CAN_PROTOCOL_ERROR_DATA);
+	//can_enable_interrupt(can_instance, CAN_PROTOCOL_ERROR_ARBITRATION | CAN_PROTOCOL_ERROR_DATA);
 
 
 }

@@ -23,6 +23,7 @@
 //
 //*****************************************************************************
 #include <stdint.h>
+#include <samc21_usbcan/samc21_usbcan.h>
 
 #include "usb.h"
 
@@ -42,12 +43,54 @@
 **---------------------------------------------------------------------------
 */
 
-uint8_t usb_wr_buffer[64];
-uint8_t bufpos = 0;
+uint8_t usb_tx_buffer0[64];
+uint8_t usb_tx_buffer1[64];
+uint8_t tx_buf0_pos = 0;
+uint8_t tx_buf1_pos = 0;
 
-uint8_t usb_getc(usart_module_t *usart_instance, uint8_t *uart_rx_buffer) {
-	usart_read_buffer_wait(usart_instance, uart_rx_buffer, 1);
-	return uart_rx_buffer[0];
+uint8_t buffer_to_fill = 0;
+
+volatile uint8_t received_char;
+volatile bool check = false;
+
+void usart_read_callback(struct usart_module *const usart_module) {
+
+	check = true;
+	//char *string = "read callback";
+	//usart_write_buffer_job(usart_instance, (uint8_t *) string, strlen(string));
+	//usart_write_buffer_job(usart_module, (uint8_t *)uart_rx_buffer, UART_RX_BUFSIZE);
+	//port_pin_toggle_output_level(LEDPIN_C21_1);
+	//port_pin_set_output_level(LEDPIN_C21_1, false);
+}
+
+void usart_write_callback(struct usart_module *const usart_module) {
+	port_pin_set_output_level(LEDPIN_C21_GREEN, LED_INACTIVE);
+}
+
+void configure_usart_callbacks(usart_module_t *usart_instance) {
+	usart_register_callback(usart_instance,
+							usart_write_callback, USART_CALLBACK_BUFFER_TRANSMITTED);
+	usart_register_callback(usart_instance,
+							usart_read_callback, USART_CALLBACK_BUFFER_RECEIVED);
+	usart_enable_callback(usart_instance, USART_CALLBACK_BUFFER_TRANSMITTED);
+	usart_enable_callback(usart_instance, USART_CALLBACK_BUFFER_RECEIVED);
+}
+
+
+bool check_usart(usart_module_t *usart_instance, uint16_t *rx_char) {
+	usart_read_job(usart_instance, rx_char);
+}
+
+bool usb_getc(struct usart_module *const usart_module, uint8_t *uart_rx_buffer) {
+
+	if (check) {
+		check = false;
+		//usart_read_buffer_wait(usart_module, uart_rx_buffer, 1);
+		return true;
+	}
+	return false;
+
+	//return uart_rx_buffer[0];
 
 	/*
 	uint8_t rx_byte;
@@ -68,7 +111,6 @@ uint8_t usb_getc(usart_module_t *usart_instance, uint8_t *uart_rx_buffer) {
 	return 0;		// return no char*/
 }
 
-
 /*
 **---------------------------------------------------------------------------
 **
@@ -85,16 +127,37 @@ uint8_t usb_getc(usart_module_t *usart_instance, uint8_t *uart_rx_buffer) {
 */
 
 void usb_send(struct usart_module *const module) {
-	if (bufpos) {
-		usart_write_buffer_job(module, usb_wr_buffer, bufpos);
-		bufpos = 0;
+
+	if (buffer_to_fill == 0) {
+		buffer_to_fill = 1;
+		//send buffer 0
+		if (tx_buf0_pos) {
+			port_pin_set_output_level(LEDPIN_C21_GREEN, LED_ACTIVE);
+			usart_write_buffer_job(module, usb_tx_buffer0, tx_buf0_pos);
+			tx_buf0_pos = 0;
+		}
+	} else {
+		buffer_to_fill = 0;
+		//send buffer 1
+		if (tx_buf1_pos) {
+			port_pin_set_output_level(LEDPIN_C21_GREEN, LED_ACTIVE);
+			usart_write_buffer_job(module, usb_tx_buffer1, tx_buf1_pos);
+			tx_buf1_pos = 0;
+		}
 	}
+
 
 }
 
 void
 usb_putc(usart_module_t *usart_instance, uint8_t tx_byte) {
-	usb_wr_buffer[bufpos++] = tx_byte;
+
+	if (buffer_to_fill == 0) {
+		usb_tx_buffer0[tx_buf0_pos++] = tx_byte;
+	}else{
+		usb_tx_buffer1[tx_buf1_pos++] = tx_byte;
+	}
+
 	//usart_write_wait(usart_instance, tx_byte);
 
 	/*
