@@ -38,8 +38,6 @@ TaskHandle_t vCreateCanTask(cantask_params *params);
 
 // Define CAN standard transfer message setting.
 #define CAN_TX_BUFFER_INDEX    0
-static uint8_t tx_message_0[CONF_CAN_ELEMENT_DATA_SIZE];
-static uint8_t tx_message_1[CONF_CAN_ELEMENT_DATA_SIZE];
 
 #define HW_VER        0x30		// hardware version
 #define SW_VER        0x40		// software version
@@ -122,7 +120,7 @@ extern struct {
 	uint8_t fixed_rate;
 } CAN_init_val;
 */
-extern volatile uint16_t CAN_flags;
+//extern volatile uint16_t CAN_flags;
 extern volatile uint8_t last_ecr;
 extern volatile uint8_t last_alc;
 

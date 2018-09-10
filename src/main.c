@@ -65,9 +65,9 @@ int main(void) {
 	ulog_s("prepare Tasks\r\n");
 	TaskHandle_t task_handles[2];
 	TaskHandle_t can_task0 = vCreateCanTask(&params_task0);
-	//TaskHandle_t can_task1 = vCreateCanTask(&params_task1);
+	TaskHandle_t can_task1 = vCreateCanTask(&params_task1);
 	task_handles[0] = &can_task0;
-	//task_handles[1] = &can_task1;
+	task_handles[1] = &can_task1;
 	vCreateStackTask((TaskHandle_t **) &task_handles, 1);
 
 	ulog_s("start scheduler\r\n");

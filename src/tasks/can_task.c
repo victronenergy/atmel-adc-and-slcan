@@ -11,11 +11,18 @@
 
 #define PeliCANMode
 
-#define UART_RX_BUFSIZE 32
+void setbit(uint16_t *res, uint8_t bitpos){
+	*res |= bitpos;
+}
 
-#define SETBIT(x, y) ((x) |= (y))    // Set bit y in byte x
-#define CLEARBIT(x, y) ((x) &= ~(y))    // Clear bit y in byte x
-#define CHECKBIT(x, y) ((x) & (y))    // Check bit y in byte x
+void clearbit(uint16_t *res, uint8_t bitpos){
+	*res &= ~bitpos;
+}
+
+uint16_t checkbit(uint16_t *res, uint8_t bitpos){
+	return *res &= bitpos;
+}
+
 
 // define local CAN status flags
 #define CAN_INIT          0x0001    // set if CAN controller is initalized
@@ -60,27 +67,23 @@
 #define EXTENDED_FRAME 1
 
 
-// TODO move to body
-uint8_t uart_rx_buffer[UART_RX_BUFSIZE];
-
-
 // CAN init values for ACR, AMR and BTR registers after power up
-struct {
+struct CAN_init_val_struct{
 	uint8_t acr[4];
 	uint8_t amr[4];
 	uint8_t btr0;
 	uint8_t btr1;
 	uint8_t fixed_rate;
-} CAN_init_val = {{0x00, 0x00, 0x00, 0x00}, {0xff, 0xff, 0xff, 0xff}, BTR0_100k, BTR1_100k, 0};
+};
 
 // CAN tx message
-struct {
+struct CAN_tx_msg_struct{
 	uint8_t format;        // Extended/Standard Frame
 	uint32_t id;            // Frame ID
 	uint8_t rtr;            // RTR/Data Frame
 	uint8_t len;            // Data Length
 	uint8_t data[8];        // Data Bytes
-} CAN_tx_msg;                // length 15 byte
+} ;                // length 15 byte
 
 // CAN rx message
 struct CAN_rx_msg_struct{
@@ -92,7 +95,7 @@ struct CAN_rx_msg_struct{
 };                  // length 15 byte/each
 
 
-volatile uint16_t CAN_flags;
+
 volatile uint8_t last_ecr;
 volatile uint8_t last_alc;
 
@@ -104,7 +107,7 @@ uint8_t can_txdata_exp[8] = {0x01};
  */
 void vCanTask(void *pvParameters);
 
-void init_can_mem(void);
+//void init_can_mem(void);
 
 void usart_read_callback(struct usart_module *usart_module);
 
@@ -112,12 +115,12 @@ void usart_write_callback(struct usart_module *usart_module);
 
 void configure_usart_callbacks(usart_module_t *usart_instance);
 
-uint8_t exec_usb_cmd(usart_module_t *usart_instance, struct can_module *can_instance, uint8_t *cmd_buf);
+uint8_t exec_usb_cmd(usart_module_t *usart_instance, struct can_module *can_instance, uint8_t *cmd_buf, uint16_t *CAN_flags, struct CAN_init_val_struct *CAN_init_val);
 
-static void can_send_standard_message(struct can_module *can_instance, uint32_t id_value, uint8_t *data);
+void can_send_standard_message(struct can_module *can_instance, uint32_t id_value, uint8_t *data);
 
 
-uint8_t init_CAN_mictronics(void);
+uint8_t reset_can_errorflags(uint16_t *CAN_flags);
 
 uint8_t transmit_CAN(struct can_module *can_instance, uint32_t id_value, uint8_t *data);
 
@@ -127,10 +130,10 @@ void write_CAN_reg(uint8_t cmd_len, uint8_t tmp_regdata);
 
 
 // TODO implement
-uint8_t init_CAN_mictronics(void) {
+uint8_t reset_can_errorflags(uint16_t *CAN_flags) {
 
 	// clear CAN error flags
-	CAN_flags &= 0x00FF;
+	*CAN_flags &= 0x00FF;
 	return CR;
 }
 
@@ -151,7 +154,7 @@ void write_CAN_reg(uint8_t cmd_len, uint8_t tmp_regdata) {
 }
 // TODO END
 
-static void can_send_standard_message(struct can_module *const can_instance, uint32_t id_value, uint8_t *data) {
+void can_send_standard_message(struct can_module *const can_instance, uint32_t id_value, uint8_t *data) {
 	ulog_s("sending message via CAN");
 	uint32_t i;
 	struct can_tx_element tx_element;
@@ -177,8 +180,16 @@ static void can_send_standard_message(struct can_module *const can_instance, uin
 uint8_t conf_CAN_RX_FIFO_0_NUM;
 uint8_t conf_CAN_RX_FIFO_1_NUM;
 
+void set_can_init_values(struct CAN_init_val_struct *can_init_val_struct){
+	memset(can_init_val_struct->acr, 0x00, 4);
+	memset(can_init_val_struct->amr, 0xff, 4);
+	can_init_val_struct->btr0 = BTR0_100k;
+	can_init_val_struct->btr1 = BTR1_100k;
+	can_init_val_struct->fixed_rate = 0x00;
+}
 
-bool handle_rx_can_msg(struct can_module *const module_inst, struct CAN_rx_msg_struct *CAN_rx_msg) {
+
+bool handle_rx_can_msg(struct can_module *const module_inst, struct CAN_rx_msg_struct *CAN_rx_msg, uint16_t *CAN_flags) {
 
 	volatile CAN_RXF0S_Type fifo0_status = module_inst->hw->RXF0S;
 	volatile CAN_RXF1S_Type fifo1_status = module_inst->hw->RXF1S;
@@ -201,7 +212,7 @@ bool handle_rx_can_msg(struct can_module *const module_inst, struct CAN_rx_msg_s
 	if(fifo0_fill_level) {
 		checkboth = true;
 
-		SETBIT(CAN_flags, MSG_WAITING);
+		setbit(CAN_flags, MSG_WAITING);
 
 		if(fifo0_status.bit.RF0L){
 			ulog_s("message lost!F0\r\n");
@@ -230,7 +241,7 @@ bool handle_rx_can_msg(struct can_module *const module_inst, struct CAN_rx_msg_s
 		if(checkboth){
 			ulog_s("received both standard and extended data.\r\nCaution: standard data is currently overwritten");
 		}
-		SETBIT(CAN_flags, MSG_WAITING);
+		setbit(CAN_flags, MSG_WAITING);
 
 		if(fifo1_status.bit.RF1L){
 			ulog_s("message lost!F1\r\n");
@@ -241,7 +252,7 @@ bool handle_rx_can_msg(struct can_module *const module_inst, struct CAN_rx_msg_s
 
 		// fifo1 is used for extended messages
 		uint32_t fifo1_getindex = (uint32_t) fifo1_status.bit.F1GI;
-		static struct can_rx_element_fifo_1 rx_element_fifo_1;
+		struct can_rx_element_fifo_1 rx_element_fifo_1;
 		can_get_rx_fifo_1_element(module_inst, &rx_element_fifo_1,
 								  fifo1_getindex);
 
@@ -261,7 +272,7 @@ bool handle_rx_can_msg(struct can_module *const module_inst, struct CAN_rx_msg_s
 /*
  * slcan cmds
  *
- *	sudo slcand -o -c -s5 -S 115200 /dev/ttyUSB0 can0
+ *	sudo slcand -o -c -s5 -S 921600 /dev/ttyUSB0 can0
  *	sudo slcan_attach /dev/ttyUSB0
  *	sudo ifconfig can0 up
  *	sudo cangen can0 -v
@@ -274,21 +285,10 @@ void vCanTask(void *pvParameters) {
 
 	cantask_params *params = (cantask_params *) pvParameters;
 
-	if ((params->task_id) == CANTASK_ID_0) {
-		conf_CAN_RX_FIFO_0_NUM = CONF_CAN0_RX_FIFO_0_NUM;
-		conf_CAN_RX_FIFO_1_NUM = CONF_CAN0_RX_FIFO_1_NUM;
-	} else if ((params->task_id) == CANTASK_ID_1) {
-		conf_CAN_RX_FIFO_0_NUM = CONF_CAN1_RX_FIFO_0_NUM;
-		conf_CAN_RX_FIFO_1_NUM = CONF_CAN1_RX_FIFO_1_NUM;
-	}else{
-		xlog(&(params->task_id),1);
-		ulog_s("invalid task\r\n");
-		return;
-	}
+	uint16_t CAN_flags = 0;
+
 
 	// Define CAN receive message setting
-
-	//ulog_s("cantask begin loop\r\n");
 
 	vTaskDelay((const TickType_t) 10);
 
@@ -299,10 +299,7 @@ void vCanTask(void *pvParameters) {
 	uint8_t cmd_buf[CMD_BUFFER_LENGTH];
 	uint8_t buf_ind = 0;
 
-	init_CAN_mictronics();
-
-	init_can_mem();
-
+	reset_can_errorflags(&CAN_flags);
 
 	//initially both LEDs off
 	port_pin_set_output_level(LEDPIN_C21_GREEN, LED_INACTIVE);
@@ -310,24 +307,21 @@ void vCanTask(void *pvParameters) {
 
 	configure_usart_callbacks(params->usart_instance);
 
-	//TODO prepare CAN interface
-
-	//ulog_s("\r\n");
 	struct CAN_rx_msg_struct CAN_rx_msg;
+
+	struct CAN_init_val_struct CAN_init_val;
+	set_can_init_values(&CAN_init_val);
+
 	for (;;) {
 		port_pin_toggle_output_level(PIN_PA11);
-		//vTaskDelay((const TickType_t) 100);
 
-		//ulog_s("task:");
-		//xlog(&(params->task_id),1);
-		//ulog_s("\r\n");
 
 		//receive data from CAN bus
 
-		handle_rx_can_msg(params->can_instance, &CAN_rx_msg);
+		handle_rx_can_msg(params->can_instance, &CAN_rx_msg, &CAN_flags);
 
 
-		if (CHECKBIT(CAN_flags, MSG_WAITING)) {
+		if (checkbit(&CAN_flags, MSG_WAITING)) {
 			//ulog_s("data received");
 
 			// check frame format
@@ -374,7 +368,7 @@ void vCanTask(void *pvParameters) {
 			 */
 			// send end tag
 			usb_putc(params->usart_instance, CR);
-			CLEARBIT(CAN_flags, MSG_WAITING);
+			clearbit(&CAN_flags, MSG_WAITING);
 		}
 
 		uint8_t rbyte = 0;
@@ -390,7 +384,7 @@ void vCanTask(void *pvParameters) {
 			{
 				// Execute USB command and return status to terminal
 				usb_putc(params->usart_instance, exec_usb_cmd(params->usart_instance,
-															  params->can_instance, cmd_buf));
+															  params->can_instance, cmd_buf, &CAN_flags, &CAN_init_val));
 
 				// flush command buffer
 				for (buf_ind = 0; buf_ind < CMD_BUFFER_LENGTH; buf_ind++)
@@ -415,8 +409,10 @@ void vCanTask(void *pvParameters) {
 
 
 
-uint8_t exec_usb_cmd(usart_module_t *usart_instance, struct can_module *can_instance, uint8_t *cmd_buf) {
+uint8_t exec_usb_cmd(usart_module_t *usart_instance, struct can_module *can_instance, uint8_t *cmd_buf, uint16_t *CAN_flags, struct CAN_init_val_struct *CAN_init_val) {
 	ulog_s("EXEC USB CMD\r\n");
+
+	struct CAN_tx_msg_struct CAN_tx_msg;
 
 	uint8_t cmd_len = (uint8_t) strlen((char *) cmd_buf);    // get command length
 
@@ -478,18 +474,18 @@ uint8_t exec_usb_cmd(usart_module_t *usart_instance, struct can_module *can_inst
 		case READ_STATUS:
 			ulog_s("request status flag");
 			// check if CAN controller is in reset mode
-			if (!CHECKBIT(CAN_flags, BUS_ON))
+			if (!checkbit(CAN_flags, BUS_ON))
 				return ERROR;
 
 			usb_putc(usart_instance, READ_STATUS);
-			usb_byte2ascii(usart_instance, (uint8_t) (CAN_flags >> 8));
+			usb_byte2ascii(usart_instance, (uint8_t) (*CAN_flags >> 8));
 
 			// turn off Bus Error indication
 			port_pin_set_output_level(LEDPIN_C21_RED, LED_INACTIVE);
 			ulog_s("bus error indication turned off.\r\n");
 
 			// reset error flags
-			CAN_flags &= 0x00FF;
+			reset_can_errorflags(CAN_flags);
 			ulog_s("error flags were reset.\r\n");
 			return CR;
 
@@ -502,14 +498,14 @@ uint8_t exec_usb_cmd(usart_module_t *usart_instance, struct can_module *can_inst
 			if (cmd_len != 9)
 				return ERROR;
 			// check if CAN controller is in reset mode
-			if (CHECKBIT(CAN_flags, BUS_ON))
+			if (checkbit(CAN_flags, BUS_ON))
 				return ERROR;
 
 			// assign pointer to AMR or ACR values depending on command
 			if (*cmd_buf_pntr == SET_AMR)
-				tmp_pntr = CAN_init_val.amr;
+				tmp_pntr = CAN_init_val->amr;
 			else
-				tmp_pntr = CAN_init_val.acr;
+				tmp_pntr = CAN_init_val->acr;
 
 			// store AMR or ACR values
 			*tmp_pntr = ascii2byte(++cmd_buf_pntr);
@@ -525,7 +521,7 @@ uint8_t exec_usb_cmd(usart_module_t *usart_instance, struct can_module *can_inst
 			*tmp_pntr <<= 4;
 			*tmp_pntr |= ascii2byte(++cmd_buf_pntr);
 			// init CAN controller with new values
-			return init_CAN_mictronics();
+			return reset_can_errorflags(CAN_flags);
 
 			// set bitrate via BTR
 		case SET_BTR:
@@ -543,38 +539,38 @@ uint8_t exec_usb_cmd(usart_module_t *usart_instance, struct can_module *can_inst
 				return ERROR;    // check valid cmd length
 			}
 			// check if CAN controller is in reset mode
-			if (CHECKBIT(CAN_flags, BUS_ON)) {
+			if (checkbit(CAN_flags, BUS_ON)) {
 				ulog_s("controller is in reset");
 				return ERROR;
 			}
 
 			// store user or fixed bit rate
 			if (*cmd_buf_pntr == SET_BTR) {
-				CAN_init_val.btr0 = ascii2byte(++cmd_buf_pntr);
-				CAN_init_val.btr0 <<= 4;
-				CAN_init_val.btr0 |= ascii2byte(++cmd_buf_pntr);
-				CAN_init_val.btr1 = ascii2byte(++cmd_buf_pntr);
-				CAN_init_val.btr1 <<= 4;
-				CAN_init_val.btr1 |= ascii2byte(++cmd_buf_pntr);
-				CAN_init_val.fixed_rate = 0;
+				CAN_init_val->btr0 = ascii2byte(++cmd_buf_pntr);
+				CAN_init_val->btr0 <<= 4;
+				CAN_init_val->btr0 |= ascii2byte(++cmd_buf_pntr);
+				CAN_init_val->btr1 = ascii2byte(++cmd_buf_pntr);
+				CAN_init_val->btr1 <<= 4;
+				CAN_init_val->btr1 |= ascii2byte(++cmd_buf_pntr);
+				CAN_init_val->fixed_rate = 0;
 			} else {
-				CAN_init_val.fixed_rate = *(++cmd_buf_pntr);
+				CAN_init_val->fixed_rate = *(++cmd_buf_pntr);
 			}
 			// init CAN controller
-			SETBIT(CAN_flags, CAN_INIT);    // indicate initialized controller
-			return init_CAN_mictronics();
+			setbit(CAN_flags, CAN_INIT);    // indicate initialized controller
+			return reset_can_errorflags(CAN_flags);
 
 			// open CAN channel
 		case OPEN_CAN_CHAN:
 			ulog_s("open CAN channel");
 			// return error if controller is not initialized or already open
-			if (!CHECKBIT(CAN_flags, CAN_INIT)) {
+			if (!checkbit(CAN_flags, CAN_INIT)) {
 				ulog_s("controller not initialized or already open");
 				return ERROR;
 			}
 
 			// check if CAN controller is in reset mode
-			if (CHECKBIT(CAN_flags, BUS_ON)) {
+			if (checkbit(CAN_flags, BUS_ON)) {
 				ulog_s("controller in reset mode");
 				return ERROR;
 			}
@@ -589,14 +585,14 @@ uint8_t exec_usb_cmd(usart_module_t *usart_instance, struct can_module *can_inst
 #endif
 			} while ((ModeControlReg & _BV(RM_RR_Bit)) == _BV(RM_RR_Bit));
 			*/
-			SETBIT(CAN_flags, BUS_ON);
+			setbit(CAN_flags, BUS_ON);
 			return CR;
 
 			// close CAN channel
 		case CLOSE_CAN_CHAN:
 			ulog_s("close CAN channel");
 			// check if CAN controller is in reset mode
-			if (!CHECKBIT(CAN_flags, BUS_ON))
+			if (!checkbit(CAN_flags, BUS_ON))
 				return ERROR;
 
 			// switch to reset mode
@@ -607,14 +603,14 @@ uint8_t exec_usb_cmd(usart_module_t *usart_instance, struct can_module *can_inst
 				ModeControlReg = _BV(RM_RR_Bit);
 #endif
 			} while ((ModeControlReg & _BV(RM_RR_Bit)) != _BV(RM_RR_Bit));
-			CLEARBIT(CAN_flags, BUS_ON);
+			clearbit(CAN_flags, BUS_ON);
 			return CR;
 
 			// send R11bit ID message
 		case SEND_R11BIT_ID:
 			ulog_s("send 11bit ID message");
 			// check if CAN controller is in reset mode or busy
-			if (!CHECKBIT(CAN_flags, BUS_ON) || CHECKBIT(CAN_flags, TX_BUSY))
+			if (!checkbit(CAN_flags, BUS_ON) || checkbit(CAN_flags, TX_BUSY))
 				return ERROR;
 			// check valid cmd length (only 5 bytes for RTR)
 			if (cmd_len != 5)
@@ -640,7 +636,7 @@ uint8_t exec_usb_cmd(usart_module_t *usart_instance, struct can_module *can_inst
 		case SEND_11BIT_ID:
 			ulog_s("send 11bit ID message");
 			// check if CAN controller is in reset mode or busy
-			if (!CHECKBIT(CAN_flags, BUS_ON) || CHECKBIT(CAN_flags, TX_BUSY)) {
+			if (!checkbit(CAN_flags, BUS_ON) || checkbit(CAN_flags, TX_BUSY)) {
 				xlog((uint8_t *) &CAN_flags, 2);
 				ulog_s("CAN controller in reset mode or busy");
 				return ERROR;
@@ -687,7 +683,7 @@ uint8_t exec_usb_cmd(usart_module_t *usart_instance, struct can_module *can_inst
 		case SEND_R29BIT_ID:
 			ulog_s("send R29bit ID message");
 			// check if CAN controller is in reset mode or busy
-			if (!CHECKBIT(CAN_flags, BUS_ON) || CHECKBIT(CAN_flags, TX_BUSY))
+			if (!checkbit(CAN_flags, BUS_ON) || checkbit(CAN_flags, TX_BUSY))
 				return ERROR;
 
 			if (cmd_len != 10)
@@ -721,7 +717,7 @@ uint8_t exec_usb_cmd(usart_module_t *usart_instance, struct can_module *can_inst
 		case SEND_29BIT_ID:
 			ulog_s("send 29bit ID message");
 			// check if CAN controller is in reset mode or busy
-			if (!CHECKBIT(CAN_flags, BUS_ON) || CHECKBIT(CAN_flags, TX_BUSY))
+			if (!checkbit(CAN_flags, BUS_ON) || checkbit(CAN_flags, TX_BUSY))
 				return ERROR;
 
 			if ((cmd_len < 10) || (cmd_len > 26))
@@ -775,7 +771,7 @@ uint8_t exec_usb_cmd(usart_module_t *usart_instance, struct can_module *can_inst
 		case READ_ALCR:
 			ulog_s("read ECR/ALCR");
 			// check if CAN controller is in reset mode
-			if (!CHECKBIT(CAN_flags, BUS_ON))
+			if (!checkbit(CAN_flags, BUS_ON))
 				return ERROR;
 
 			if (*cmd_buf_pntr == READ_ECR) {
@@ -822,12 +818,12 @@ uint8_t exec_usb_cmd(usart_module_t *usart_instance, struct can_module *can_inst
 		case LISTEN_ONLY:
 			ulog_s("listen only mode");
 			// return error if controller is not initialized or already open
-			if (!CHECKBIT(CAN_flags, CAN_INIT))
+			if (!checkbit(CAN_flags, CAN_INIT))
 				ulog_s("can not initlzd");
 			return ERROR;
 
 			// check if CAN controller is in reset mode
-			if (CHECKBIT(CAN_flags, BUS_ON))
+			if (checkbit(CAN_flags, BUS_ON))
 				ulog_s("can ctrl in reset");
 			return ERROR;
 
@@ -835,7 +831,7 @@ uint8_t exec_usb_cmd(usart_module_t *usart_instance, struct can_module *can_inst
 			/*	do {
 					ModeControlReg = _BV(LOM_Bit);
 				} while ((ModeControlReg & _BV(RM_RR_Bit)) == _BV(RM_RR_Bit));*/
-			SETBIT(CAN_flags, BUS_ON);
+			setbit(CAN_flags, BUS_ON);
 			return CR;
 
 			//TODO remove the following case
@@ -856,15 +852,15 @@ uint8_t exec_usb_cmd(usart_module_t *usart_instance, struct can_module *can_inst
 }                // end exec_usb_cmd
 
 
-
+/*
 void init_can_mem() {
-	/* Initialize the memory. */
+	/* Initialize the memory. *//*
 	for (uint32_t i = 0; i < CONF_CAN_ELEMENT_DATA_SIZE; i++) {
 		tx_message_0[i] = (uint8_t) i;
 		tx_message_1[i] = (uint8_t) (i + 0x80);
 	}
 }
-
+*/
 
 TaskHandle_t vCreateCanTask(cantask_params *params) {
 
