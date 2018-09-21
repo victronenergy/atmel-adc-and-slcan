@@ -100,7 +100,7 @@ volatile uint8_t last_ecr;
 volatile uint8_t last_alc;
 
 
-uint8_t can_txdata_exp[8] = {0x01};
+
 
 /*
  * Prototypes
@@ -115,7 +115,7 @@ void usart_write_callback(struct usart_module *usart_module);
 
 void configure_usart_callbacks(usart_module_t *usart_instance);
 
-uint8_t exec_usb_cmd(usart_module_t *usart_instance, struct can_module *can_instance, uint8_t *cmd_buf, uint16_t *CAN_flags, struct CAN_init_val_struct *CAN_init_val);
+uint8_t exec_usb_cmd(usart_module_t *usart_instance, struct can_module *can_instance, uint8_t *cmd_buf, uint16_t *CAN_flags, struct CAN_init_val_struct *CAN_init_val,uint8_t cantask_id);
 
 void can_send_standard_message(struct can_module *can_instance, uint32_t id_value, uint8_t *data);
 
@@ -283,12 +283,15 @@ bool handle_rx_can_msg(struct can_module *const module_inst, struct CAN_rx_msg_s
 
 void vCanTask(void *pvParameters) {
 
+
+
 	cantask_params *params = (cantask_params *) pvParameters;
 
 	uint16_t CAN_flags = 0;
 
+	uint8_t cantask_id = params->task_id;
 
-	// Define CAN receive message setting
+			// Define CAN receive message setting
 
 	vTaskDelay((const TickType_t) 10);
 
@@ -318,46 +321,46 @@ void vCanTask(void *pvParameters) {
 
 		//receive data from CAN bus
 
+		if (params->task_id == CANTASK_ID_1) {
 		handle_rx_can_msg(params->can_instance, &CAN_rx_msg, &CAN_flags);
-
+	}
 
 		if (checkbit(&CAN_flags, MSG_WAITING)) {
 			//ulog_s("data received");
-
 			// check frame format
 			if (!CAN_rx_msg.format) {    // Standard Frame
 				if (!CAN_rx_msg.rtr) {
-					usb_putc(params->usart_instance, SEND_11BIT_ID);
+					usb_putc(params->usart_instance, SEND_11BIT_ID,cantask_id);
 				}        // send command tag
 				else {
-					usb_putc(params->usart_instance, SEND_R11BIT_ID);
+					usb_putc(params->usart_instance, SEND_R11BIT_ID,cantask_id);
 				}
 				// send high byte of ID
 				if (((CAN_rx_msg.id >> 8) & 0x0F) < 10)
-					usb_putc(params->usart_instance, (uint8_t) (((CAN_rx_msg.id >> 8) & 0x0F) + 48));
+					usb_putc(params->usart_instance, (uint8_t) (((CAN_rx_msg.id >> 8) & 0x0F) + 48),cantask_id);
 				else
-					usb_putc(params->usart_instance, (uint8_t) (((CAN_rx_msg.id >> 8) & 0x0F) + 55));
+					usb_putc(params->usart_instance, (uint8_t) (((CAN_rx_msg.id >> 8) & 0x0F) + 55),cantask_id);
 				// send low byte of ID
-				usb_byte2ascii(params->usart_instance, (uint8_t) (CAN_rx_msg.id & 0xFF));
+				usb_byte2ascii(params->usart_instance, (uint8_t) (CAN_rx_msg.id & 0xFF),cantask_id);
 			} else {        // Extended Frame
 				if (!CAN_rx_msg.rtr) {
-					usb_putc(params->usart_instance, SEND_29BIT_ID);
+					usb_putc(params->usart_instance, SEND_29BIT_ID,cantask_id);
 				}        // send command tag
 				else {
-					usb_putc(params->usart_instance, SEND_R29BIT_ID);
+					usb_putc(params->usart_instance, SEND_R29BIT_ID,cantask_id);
 				}
 				// send ID bytes
-				usb_byte2ascii(params->usart_instance, (uint8_t) ((CAN_rx_msg.id >> 24) & 0xFF));
-				usb_byte2ascii(params->usart_instance, (uint8_t) ((CAN_rx_msg.id >> 16) & 0xFF));
-				usb_byte2ascii(params->usart_instance, (uint8_t) ((CAN_rx_msg.id >> 8) & 0xFF));
-				usb_byte2ascii(params->usart_instance, (uint8_t) (CAN_rx_msg.id & 0xFF));
+				usb_byte2ascii(params->usart_instance, (uint8_t) ((CAN_rx_msg.id >> 24) & 0xFF),cantask_id);
+				usb_byte2ascii(params->usart_instance, (uint8_t) ((CAN_rx_msg.id >> 16) & 0xFF),cantask_id);
+				usb_byte2ascii(params->usart_instance, (uint8_t) ((CAN_rx_msg.id >> 8) & 0xFF),cantask_id);
+				usb_byte2ascii(params->usart_instance, (uint8_t) (CAN_rx_msg.id & 0xFF),cantask_id);
 			}
 			// send data length code
-			usb_putc(params->usart_instance, (uint8_t) (CAN_rx_msg.len + '0'));
+			usb_putc(params->usart_instance, (uint8_t) (CAN_rx_msg.len + '0'),cantask_id);
 			if (!CAN_rx_msg.rtr) {    // send data only if no remote frame request
 				// send data bytes
 				for (uint8_t can_rxmsg_pos = 0; can_rxmsg_pos < CAN_rx_msg.len; can_rxmsg_pos++)
-					usb_byte2ascii(params->usart_instance, CAN_rx_msg.data[can_rxmsg_pos]);
+					usb_byte2ascii(params->usart_instance, CAN_rx_msg.data[can_rxmsg_pos],cantask_id);
 			}
 			/*	TODO clarify: TIMESTAMP required at all?
 			// send time stamp if required
@@ -367,7 +370,7 @@ void vCanTask(void *pvParameters) {
 			}
 			 */
 			// send end tag
-			usb_putc(params->usart_instance, CR);
+			usb_putc(params->usart_instance, CR,cantask_id);
 			clearbit(&CAN_flags, MSG_WAITING);
 		}
 
@@ -384,7 +387,7 @@ void vCanTask(void *pvParameters) {
 			{
 				// Execute USB command and return status to terminal
 				usb_putc(params->usart_instance, exec_usb_cmd(params->usart_instance,
-															  params->can_instance, cmd_buf, &CAN_flags, &CAN_init_val));
+															  params->can_instance, cmd_buf, &CAN_flags, &CAN_init_val,cantask_id),cantask_id);
 
 				// flush command buffer
 				for (buf_ind = 0; buf_ind < CMD_BUFFER_LENGTH; buf_ind++)
@@ -399,8 +402,9 @@ void vCanTask(void *pvParameters) {
 					buf_ind++;
 			}
 		}
-		usb_send(params->usart_instance);
+		usb_send(params->usart_instance,cantask_id);
 		flush_clog();
+		vTaskDelay(0);
 	}
 }
 
@@ -409,7 +413,7 @@ void vCanTask(void *pvParameters) {
 
 
 
-uint8_t exec_usb_cmd(usart_module_t *usart_instance, struct can_module *can_instance, uint8_t *cmd_buf, uint16_t *CAN_flags, struct CAN_init_val_struct *CAN_init_val) {
+uint8_t exec_usb_cmd(usart_module_t *usart_instance, struct can_module *can_instance, uint8_t *cmd_buf, uint16_t *CAN_flags, struct CAN_init_val_struct *CAN_init_val, uint8_t cantask_id) {
 	ulog_s("EXEC USB CMD\r\n");
 
 	struct CAN_tx_msg_struct CAN_tx_msg;
@@ -433,24 +437,24 @@ uint8_t exec_usb_cmd(usart_module_t *usart_instance, struct can_module *can_inst
 		// get serial number
 		case GET_SERIAL:
 			ulog_s("request serial");
-			usb_putc(usart_instance, GET_SERIAL);
-			usb_puts(usart_instance, (uint8_t *) SERIAL);
+			usb_putc(usart_instance, GET_SERIAL,cantask_id);
+			usb_puts(usart_instance, (uint8_t *) SERIAL,cantask_id);
 			return CR;
 
 			// get hard- and software version
 		case GET_VERSION:
 			ulog_s("request version");
-			usb_putc(usart_instance, GET_VERSION);
-			usb_byte2ascii(usart_instance, HW_VER);
-			usb_byte2ascii(usart_instance, SW_VER);
+			usb_putc(usart_instance, GET_VERSION,cantask_id);
+			usb_byte2ascii(usart_instance, HW_VER,cantask_id);
+			usb_byte2ascii(usart_instance, SW_VER,cantask_id);
 			return CR;
 
 			// get only software version
 		case GET_SW_VERSION:
 			ulog_s("request sw version");
-			usb_putc(usart_instance, GET_SW_VERSION);
-			usb_byte2ascii(usart_instance, SW_VER_MAJOR);
-			usb_byte2ascii(usart_instance, SW_VER_MINOR);
+			usb_putc(usart_instance, GET_SW_VERSION,cantask_id);
+			usb_byte2ascii(usart_instance, SW_VER_MAJOR,cantask_id);
+			usb_byte2ascii(usart_instance, SW_VER_MINOR,cantask_id);
 			return CR;
 /*
  * TODO clarify if actually needed
@@ -477,8 +481,8 @@ uint8_t exec_usb_cmd(usart_module_t *usart_instance, struct can_module *can_inst
 			if (!checkbit(CAN_flags, BUS_ON))
 				return ERROR;
 
-			usb_putc(usart_instance, READ_STATUS);
-			usb_byte2ascii(usart_instance, (uint8_t) (*CAN_flags >> 8));
+			usb_putc(usart_instance, READ_STATUS,cantask_id);
+			usb_byte2ascii(usart_instance, (uint8_t) (*CAN_flags >> 8),cantask_id);
 
 			// turn off Bus Error indication
 			port_pin_set_output_level(LEDPIN_C21_RED, LED_INACTIVE);
@@ -775,11 +779,11 @@ uint8_t exec_usb_cmd(usart_module_t *usart_instance, struct can_module *can_inst
 				return ERROR;
 
 			if (*cmd_buf_pntr == READ_ECR) {
-				usb_putc(usart_instance, READ_ECR);
-				usb_byte2ascii(usart_instance, last_ecr);
+				usb_putc(usart_instance, READ_ECR,cantask_id);
+				usb_byte2ascii(usart_instance, last_ecr,cantask_id);
 			} else {
-				usb_putc(usart_instance, READ_ALCR);
-				usb_byte2ascii(usart_instance, last_alc);
+				usb_putc(usart_instance, READ_ALCR,cantask_id);
+				usb_byte2ascii(usart_instance, last_alc,cantask_id);
 			}
 			return CR;
 
@@ -793,8 +797,8 @@ uint8_t exec_usb_cmd(usart_module_t *usart_instance, struct can_module *can_inst
 			cmd_len = ascii2byte(++cmd_buf_pntr);
 			cmd_len <<= 4;
 			cmd_len |= ascii2byte(++cmd_buf_pntr);
-			usb_putc(usart_instance, READ_REG);
-			usb_byte2ascii(usart_instance, read_CAN_reg(cmd_len));
+			usb_putc(usart_instance, READ_REG,cantask_id);
+			usb_byte2ascii(usart_instance, read_CAN_reg(cmd_len),cantask_id);
 			return CR;
 
 			// write SJA1000 register
@@ -837,6 +841,7 @@ uint8_t exec_usb_cmd(usart_module_t *usart_instance, struct can_module *can_inst
 			//TODO remove the following case
 		case 'Q':
 			ulog_s("Q testing case\r\n");
+			uint8_t can_txdata_exp[8] = {0x01};
 			can_send_standard_message(can_instance, CAN_RX_STANDARD_FILTER_ID_0, can_txdata_exp);
 
 			return CR;

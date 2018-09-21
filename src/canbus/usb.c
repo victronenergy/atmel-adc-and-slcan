@@ -24,6 +24,7 @@
 //*****************************************************************************
 #include <stdint.h>
 #include <samc21_usbcan/samc21_usbcan.h>
+#include <can_task.h>
 
 #include "usb.h"
 
@@ -43,12 +44,18 @@
 **---------------------------------------------------------------------------
 */
 
-uint8_t usb_tx_buffer0[64];
-uint8_t usb_tx_buffer1[64];
-uint8_t tx_buf0_pos = 0;
-uint8_t tx_buf1_pos = 0;
+uint8_t usb_tx_buffer_0a[64];
+uint8_t usb_tx_buffer_0b[64];
+uint8_t tx_buf_0a_pos = 0;
+uint8_t tx_buf_0b_pos = 0;
 
-uint8_t buffer_to_fill = 0;
+uint8_t usb_tx_buffer_1a[64];
+uint8_t usb_tx_buffer_1b[64];
+uint8_t tx_buf_1a_pos = 0;
+uint8_t tx_buf_1b_pos = 0;
+
+uint8_t buffer_to_fill_0 = 0;
+uint8_t buffer_to_fill_1 = 0;
 
 volatile uint8_t received_char;
 volatile bool check = false;
@@ -126,36 +133,63 @@ bool usb_getc(struct usart_module *const usart_module, uint8_t *uart_rx_buffer) 
 **---------------------------------------------------------------------------
 */
 
-void usb_send(struct usart_module *const module) {
+void usb_send(struct usart_module *const module, uint8_t can_task_id) {
 
-	if (buffer_to_fill == 0) {
-		buffer_to_fill = 1;
-		//send buffer 0
-		if (tx_buf0_pos) {
-			port_pin_set_output_level(LEDPIN_C21_GREEN, LED_ACTIVE);
-			usart_write_buffer_job(module, usb_tx_buffer0, tx_buf0_pos);
-			tx_buf0_pos = 0;
+	if (can_task_id == CANTASK_ID_0) {
+		if (buffer_to_fill_0 == 0) {
+			buffer_to_fill_0 = 1;
+			//send buffer A
+			if (tx_buf_0a_pos) {
+				port_pin_set_output_level(LEDPIN_C21_GREEN, LED_ACTIVE);
+				usart_write_buffer_job(module, usb_tx_buffer_0a, tx_buf_0a_pos);
+				tx_buf_0a_pos = 0;
+			}
+		} else {
+			buffer_to_fill_0 = 0;
+			//send buffer B
+			if (tx_buf_0b_pos) {
+				port_pin_set_output_level(LEDPIN_C21_GREEN, LED_ACTIVE);
+				usart_write_buffer_job(module, usb_tx_buffer_0b, tx_buf_0b_pos);
+				tx_buf_0b_pos = 0;
+			}
 		}
 	} else {
-		buffer_to_fill = 0;
-		//send buffer 1
-		if (tx_buf1_pos) {
-			port_pin_set_output_level(LEDPIN_C21_GREEN, LED_ACTIVE);
-			usart_write_buffer_job(module, usb_tx_buffer1, tx_buf1_pos);
-			tx_buf1_pos = 0;
+		if (buffer_to_fill_1 == 0) {
+			buffer_to_fill_1 = 1;
+			//send buffer A
+			if (tx_buf_1a_pos) {
+				port_pin_set_output_level(LEDPIN_C21_GREEN, LED_ACTIVE);
+				usart_write_buffer_job(module, usb_tx_buffer_1a, tx_buf_1a_pos);
+				tx_buf_1a_pos = 0;
+			}
+		} else {
+			buffer_to_fill_1 = 0;
+			//send buffer B
+			if (tx_buf_1b_pos) {
+				port_pin_set_output_level(LEDPIN_C21_GREEN, LED_ACTIVE);
+				usart_write_buffer_job(module, usb_tx_buffer_1b, tx_buf_1b_pos);
+				tx_buf_1b_pos = 0;
+			}
 		}
-	}
 
+	}
 
 }
 
 void
-usb_putc(usart_module_t *usart_instance, uint8_t tx_byte) {
-
-	if (buffer_to_fill == 0) {
-		usb_tx_buffer0[tx_buf0_pos++] = tx_byte;
-	}else{
-		usb_tx_buffer1[tx_buf1_pos++] = tx_byte;
+usb_putc(usart_module_t *usart_instance, uint8_t tx_byte, uint8_t cantask_id) {
+	if (cantask_id == CANTASK_ID_0) {
+		if (buffer_to_fill_0 == 0) {
+			usb_tx_buffer_0a[tx_buf_0a_pos++] = tx_byte;
+		} else {
+			usb_tx_buffer_0b[tx_buf_0b_pos++] = tx_byte;
+		}
+	} else {
+		if (buffer_to_fill_1 == 0) {
+			usb_tx_buffer_1a[tx_buf_1a_pos++] = tx_byte;
+		} else {
+			usb_tx_buffer_1b[tx_buf_1b_pos++] = tx_byte;
+		}
 	}
 
 	//usart_write_wait(usart_instance, tx_byte);
@@ -191,14 +225,14 @@ usb_putc(usart_module_t *usart_instance, uint8_t tx_byte) {
 **---------------------------------------------------------------------------
 */
 void
-usb_byte2ascii(usart_module_t *usart_instance, uint8_t tx_byte) {
+usb_byte2ascii(usart_module_t *usart_instance, uint8_t tx_byte, uint8_t cantask_id) {
 	uint8_t highnibble = ((tx_byte >> 4) <
 						  10) ? ((tx_byte >> 4) & 0x0f) + 48 : ((tx_byte >> 4) & 0x0f) +
 															   55;
-	usb_putc(usart_instance, highnibble);
+	usb_putc(usart_instance, highnibble, cantask_id);
 	uint8_t lownibble = ((tx_byte & 0x0f) <
 						 10) ? (tx_byte & 0x0f) + 48 : (tx_byte & 0x0f) + 55;
-	usb_putc(usart_instance, lownibble);
+	usb_putc(usart_instance, lownibble, cantask_id);
 
 
 	/*
@@ -237,7 +271,7 @@ uint8_t ascii2byte(uint8_t *val) {
 **---------------------------------------------------------------------------
 */
 void
-usb_puts(usart_module_t *usart_instance, uint8_t *tx_string) {
+usb_puts(usart_module_t *usart_instance, uint8_t *tx_string, uint8_t cantask_id) {
 	while (*tx_string)
-		usb_putc(usart_instance, *tx_string++);    // send string char by char
+		usb_putc(usart_instance, *tx_string++, cantask_id);    // send string char by char
 }

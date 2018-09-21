@@ -4,7 +4,7 @@
 
 #include "conf_can.h"
 #include "can.h"
-
+#include "log.h"
 #ifndef SAMC_FREERTOS_CAN_TASK_H
 #define SAMC_FREERTOS_CAN_TASK_H
 
