@@ -203,7 +203,7 @@ bool handle_rx_can_msg(struct can_module *const module_inst, struct CAN_rx_msg_s
 		port_pin_set_output_level(LEDPIN_C21_RED, LED_ACTIVE);
 		can_clear_interrupt_status(module_inst, CAN_PROTOCOL_ERROR_ARBITRATION
 												| CAN_PROTOCOL_ERROR_DATA);
-		ulog_s("Protocol error, please double check the clock in two boards. \r\n\r\n");
+		//ulog_s("Protocol error, please double check the clock in two boards. \r\n\r\n");
 	}
 
 	bool checkboth = false;
