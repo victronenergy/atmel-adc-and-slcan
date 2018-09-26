@@ -48,7 +48,7 @@
 bool usb_getc (usart_module_t *usart_instance, uint8_t *uart_rx_buffer);
 void usb_putc (usart_module_t *usart_instance, uint8_t tx_byte, uint8_t cantask_id);
 void usb_byte2ascii (usart_module_t *usart_instance, uint8_t tx_byte, uint8_t cantask_id);
-uint8_t ascii2byte (uint8_t * val);
+uint8_t ascii2byte (const uint8_t const *val);
 void usb_puts (usart_module_t *usart_instance, uint8_t * tx_string, uint8_t cantask_id);
 void usb_send(struct usart_module *const module, uint8_t can_task_id);
 bool check_usart(usart_module_t *usart_instance, uint16_t *rx_char);

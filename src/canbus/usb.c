@@ -44,18 +44,39 @@
 **---------------------------------------------------------------------------
 */
 
+
+/**
+ * usb send buffers
+ *
+ * There are 2 buffers per CAN task, so 4 buffers in total.
+ * The 2 buffers per task prevent problems of simultaneous writing into the buffer while sending data
+ *
+ */
+
+
+// buffers for can task 0
 uint8_t usb_tx_buffer_0a[64];
 uint8_t usb_tx_buffer_0b[64];
+//current positions for can task 0
 uint8_t tx_buf_0a_pos = 0;
 uint8_t tx_buf_0b_pos = 0;
 
+// buffers for can task 1
 uint8_t usb_tx_buffer_1a[64];
 uint8_t usb_tx_buffer_1b[64];
+//current positions for can task 1
 uint8_t tx_buf_1a_pos = 0;
 uint8_t tx_buf_1b_pos = 0;
 
-uint8_t buffer_to_fill_0 = 0;
-uint8_t buffer_to_fill_1 = 0;
+//constants used to indicate which buffer to fill currently
+#define BUFFER_TO_FILL_A 0
+#define BUFFER_TO_FILL_B 1
+
+// indicates which buffer (A/B) is used for new chars in can task 0
+uint8_t buffer_to_fill_can0 = BUFFER_TO_FILL_A;
+
+// indicates which buffer (A/B) is used for new chars in can task 1
+uint8_t buffer_to_fill_can1 = BUFFER_TO_FILL_A;
 
 volatile uint8_t received_char;
 volatile bool check = false;
@@ -136,8 +157,10 @@ bool usb_getc(struct usart_module *const usart_module, uint8_t *uart_rx_buffer) 
 void usb_send(struct usart_module *const module, uint8_t can_task_id) {
 
 	if (can_task_id == CANTASK_ID_0) {
-		if (buffer_to_fill_0 == 0) {
-			buffer_to_fill_0 = 1;
+		// this only concerns can task 0
+		if (buffer_to_fill_can0 == BUFFER_TO_FILL_A) {
+			//until now, buffer A was filled. switch to buffer B for filling, so we can send the content of A
+			buffer_to_fill_can0 = BUFFER_TO_FILL_B;
 			//send buffer A
 			if (tx_buf_0a_pos) {
 				port_pin_set_output_level(LEDPIN_C21_GREEN, LED_ACTIVE);
@@ -145,7 +168,7 @@ void usb_send(struct usart_module *const module, uint8_t can_task_id) {
 				tx_buf_0a_pos = 0;
 			}
 		} else {
-			buffer_to_fill_0 = 0;
+			buffer_to_fill_can0 = BUFFER_TO_FILL_A;
 			//send buffer B
 			if (tx_buf_0b_pos) {
 				port_pin_set_output_level(LEDPIN_C21_GREEN, LED_ACTIVE);
@@ -154,8 +177,10 @@ void usb_send(struct usart_module *const module, uint8_t can_task_id) {
 			}
 		}
 	} else {
-		if (buffer_to_fill_1 == 0) {
-			buffer_to_fill_1 = 1;
+		// this only concerns can task 1
+		if (buffer_to_fill_can1 == BUFFER_TO_FILL_A) {
+			//until now, buffer A was filled. switch to buffer B for filling, so we can send the content of A
+			buffer_to_fill_can1 = BUFFER_TO_FILL_B;
 			//send buffer A
 			if (tx_buf_1a_pos) {
 				port_pin_set_output_level(LEDPIN_C21_GREEN, LED_ACTIVE);
@@ -163,7 +188,7 @@ void usb_send(struct usart_module *const module, uint8_t can_task_id) {
 				tx_buf_1a_pos = 0;
 			}
 		} else {
-			buffer_to_fill_1 = 0;
+			buffer_to_fill_can1 = BUFFER_TO_FILL_A;
 			//send buffer B
 			if (tx_buf_1b_pos) {
 				port_pin_set_output_level(LEDPIN_C21_GREEN, LED_ACTIVE);
@@ -176,37 +201,32 @@ void usb_send(struct usart_module *const module, uint8_t can_task_id) {
 
 }
 
+
+/**
+ * appends a char to the sequence in the buffer. does not send any data.
+ *
+ * @param usart_instance
+ * @param tx_byte
+ * @param cantask_id
+ */
 void
 usb_putc(usart_module_t *usart_instance, uint8_t tx_byte, uint8_t cantask_id) {
+	// check which task wants to send data
 	if (cantask_id == CANTASK_ID_0) {
-		if (buffer_to_fill_0 == 0) {
+		//append to the buffer that is currently selected for filling
+		if (buffer_to_fill_can0 == BUFFER_TO_FILL_A) {
 			usb_tx_buffer_0a[tx_buf_0a_pos++] = tx_byte;
 		} else {
 			usb_tx_buffer_0b[tx_buf_0b_pos++] = tx_byte;
 		}
 	} else {
-		if (buffer_to_fill_1 == 0) {
+		//append to the buffer that is currently selected for filling
+		if (buffer_to_fill_can1 == BUFFER_TO_FILL_A) {
 			usb_tx_buffer_1a[tx_buf_1a_pos++] = tx_byte;
 		} else {
 			usb_tx_buffer_1b[tx_buf_1b_pos++] = tx_byte;
 		}
 	}
-
-	//usart_write_wait(usart_instance, tx_byte);
-
-	/*
-	while ((USB_TX_PIN & _BV (USB_TXE)) == _BV (USB_TXE));	// wait for Tx ready
-
-	USB_DATA_DIR = 0xFF;	// USB data port all output
-	USB_DATA_PORT = tx_byte;	// send data byte
-
-	USB_TX_PORT |= _BV (USB_WR);	// enable WR
-	asm ("NOP");
-	USB_TX_PORT &= ~_BV (USB_WR);	// disable WR
-	asm ("NOP");
-
-	USB_DATA_DIR = 0x00;	// USB data port all inputs
-	USB_DATA_PORT = 0xFF;	// enable data port pull-ups*/
 }
 
 
@@ -226,24 +246,18 @@ usb_putc(usart_module_t *usart_instance, uint8_t tx_byte, uint8_t cantask_id) {
 */
 void
 usb_byte2ascii(usart_module_t *usart_instance, uint8_t tx_byte, uint8_t cantask_id) {
-	uint8_t highnibble = ((tx_byte >> 4) <
-						  10) ? ((tx_byte >> 4) & 0x0f) + 48 : ((tx_byte >> 4) & 0x0f) +
-															   55;
+	uint8_t highnibble = (uint8_t) (((tx_byte >> 4) <
+									 10) ? ((tx_byte >> 4) & 0x0f) + 48 : ((tx_byte >> 4) & 0x0f) +
+																		  55);
 	usb_putc(usart_instance, highnibble, cantask_id);
-	uint8_t lownibble = ((tx_byte & 0x0f) <
-						 10) ? (tx_byte & 0x0f) + 48 : (tx_byte & 0x0f) + 55;
+
+	uint8_t lownibble = (uint8_t) (((tx_byte & 0x0f) <
+									10) ? (tx_byte & 0x0f) + 48 : (tx_byte & 0x0f) + 55);
 	usb_putc(usart_instance, lownibble, cantask_id);
-
-
-	/*
-    // send high nibble
-    usb_putc (usart_instance, );
-    // send low nibble
-    usb_putc (usart_instance, );*/
 }
 
 
-uint8_t ascii2byte(uint8_t *val) {
+uint8_t ascii2byte(const uint8_t const *val) {
 	uint8_t temp = *val;
 
 	if (temp > 0x60)
