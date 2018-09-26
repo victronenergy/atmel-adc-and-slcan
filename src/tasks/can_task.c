@@ -324,6 +324,8 @@ void vCanTask(void *pvParameters) {
 	struct CAN_init_val_struct CAN_init_val;
 	set_can_init_values(&CAN_init_val, &CAN_flags);
 
+	check_usart(usart_instance,&usb_rx_char,cantask_id);
+
 	for (;;) {
 		port_pin_toggle_output_level(PIN_PA11);
 
@@ -380,13 +382,17 @@ void vCanTask(void *pvParameters) {
 		}
 
 		uint8_t rbyte = 0;
-		check_usart(usart_instance, &usb_rx_char);
-		bool newdata = usart_new_data_available(cantask_id);
+		//bool check = check_usart(usart_instance, &usb_rx_char, cantask_id);
+		//bool newdata = usart_new_data_available(cantask_id);
+
+		uint16_t *usb_newchar;
+
+		bool newdata = usart_read_char(usart_instance, &usb_rx_char,usb_newchar, cantask_id);
 
 		if (newdata) {
-			//xlog((uint8_t *) &usb_rx_char, 2);
+			xlog((uint8_t *) &usb_newchar, 1);
 			//c_log('\n');
-			rbyte = (uint8_t) usb_rx_char;
+			rbyte = (uint8_t) usb_newchar;
 
 			if (rbyte == CR)    // check for end of command
 			{
@@ -435,6 +441,8 @@ void vCanTask(void *pvParameters) {
  * @return
  */
 uint8_t exec_usb_cmd(usart_module_t *usart_instance, struct can_module *can_instance, uint8_t *cmd_buf, uint16_t *CAN_flags, struct CAN_init_val_struct *CAN_init_val, uint8_t cantask_id) {
+
+	//ulog_s("EXEC USB CMD");
 
 	struct CAN_tx_msg_struct CAN_tx_msg;	// CAN msg to send
 

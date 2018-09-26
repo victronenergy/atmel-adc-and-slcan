@@ -51,7 +51,8 @@ void usb_byte2ascii (uint8_t tx_byte, uint8_t cantask_id);
 uint8_t ascii2byte (const uint8_t const *val);
 void usb_puts (uint8_t * tx_string, uint8_t cantask_id);
 void usb_send(struct usart_module *const module, uint8_t can_task_id);
-bool check_usart(usart_module_t *usart_instance, uint16_t *rx_char);
+bool check_usart(usart_module_t *usart_instance, uint16_t *rx_char, uint8_t cantask_id);
+bool usart_read_char(usart_module_t *usart_instance, uint16_t *rx_char, uint16_t *rcvd_char, uint8_t cantask_id);
 
 void usart_read_callback_cantask0(struct usart_module *const usart_module);
 void usart_write_callback_cantask0(struct usart_module *const usart_module);

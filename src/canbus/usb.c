@@ -45,6 +45,9 @@
 */
 
 
+bool callback_pending_0 = false;
+bool callback_pending_1 = false;
+
 /*
  * usb send buffers
  * There are 2 buffers per CAN task, so 4 buffers in total.
@@ -74,17 +77,18 @@ uint8_t buffer_to_fill_can0 = BUFFER_TO_FILL_A;
 // indicates which buffer (A/B) is used for new chars in can task 1
 uint8_t buffer_to_fill_can1 = BUFFER_TO_FILL_A;
 
-volatile bool check_cantask0 = false;
-volatile bool check_cantask1 = false;
+volatile bool newdata_cantask0 = false;
+volatile bool newdata_cantask1 = false;
+
+uint16_t *rx_glbl_0;
+uint16_t *rx_glbl_1;
 
 void usart_read_callback_cantask0(struct usart_module *const usart_module) {
-
-	check_cantask0 = true;
+	newdata_cantask0 = true;
 }
 
 void usart_read_callback_cantask1(struct usart_module *const usart_module) {
-
-	check_cantask1 = true;
+	newdata_cantask1 = true;
 }
 
 void usart_write_callback_cantask0(struct usart_module *const usart_module) {
@@ -114,22 +118,66 @@ void configure_usart_callbacks(usart_module_t *usart_instance, uint8_t cantask_i
 }
 
 
+bool usart_read_char(usart_module_t *usart_instance, uint16_t *rx_char, uint16_t *rcvd_char, uint8_t cantask_id) {
+	bool retval = false;
+
+	if (cantask_id == CANTASK_ID_0) {
+		if (newdata_cantask0) {
+			newdata_cantask0 = false;
+			rx_glbl_0 = rx_char;
+			uint16_t val = *rx_glbl_0;
+			*rcvd_char = val;
+			return usart_read_job(usart_instance, rx_char);
+			return true;
+		}
+	}else{
+		if (newdata_cantask1) {
+			newdata_cantask1 = false;
+			rx_glbl_1 = rx_char;
+			uint16_t val = *rx_glbl_1;
+			*rcvd_char = val;
+			return usart_read_job(usart_instance, rx_char);
+			return true;
+		}
+	}
+	return retval;
+}
+
+
 // gets called regularly by the cantask to check for new chars via UART
-bool check_usart(usart_module_t *usart_instance, uint16_t *rx_char) {
-	usart_read_job(usart_instance, rx_char);
+bool check_usart(usart_module_t *usart_instance, uint16_t *rx_char, uint8_t cantask_id) {
+
+		return usart_read_job(usart_instance, rx_char);
+	/*
+	if (cantask_id == CANTASK_ID_0) {
+		if(callback_pending_0) {
+			callback_pending_0 = false;
+		}else{
+			return usart_read_job(usart_instance, rx_char);
+			callback_pending_0 = true;
+		}
+	}else{
+		if(callback_pending_1) {
+			callback_pending_1 = false;
+		}else{
+			return usart_read_job(usart_instance, rx_char);
+			callback_pending_1 = true;
+		}
+	}
+	return false;*/
 }
 
 // check if new data was received (set by the callback)
 bool usart_new_data_available(uint8_t cantask_id) {
 
 	if (cantask_id == CANTASK_ID_0) {
-		if (check_cantask0) {
-			check_cantask0 = false;
+		if (newdata_cantask0) {
+			newdata_cantask0 = false;
 			return true;
 		}
 	}else{
-		if (check_cantask1) {
-			check_cantask1 = false;
+		if (newdata_cantask1) {
+			newdata_cantask1 = false;
 			return true;
 		}
 	}
@@ -225,6 +273,8 @@ usb_putc(uint8_t tx_byte, uint8_t cantask_id) {
 		}
 	}
 }
+
+
 
 
 /*
