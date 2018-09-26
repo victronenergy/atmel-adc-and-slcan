@@ -102,16 +102,15 @@ void configure_usart_callbacks(usart_module_t *usart_instance, uint8_t cantask_i
 								usart_write_callback_cantask0, USART_CALLBACK_BUFFER_TRANSMITTED);
 		usart_register_callback(usart_instance,
 								usart_read_callback_cantask0, USART_CALLBACK_BUFFER_RECEIVED);
-		usart_enable_callback(usart_instance, USART_CALLBACK_BUFFER_TRANSMITTED);
-		usart_enable_callback(usart_instance, USART_CALLBACK_BUFFER_RECEIVED);
 	}else{
 		usart_register_callback(usart_instance,
 								usart_write_callback_cantask1, USART_CALLBACK_BUFFER_TRANSMITTED);
 		usart_register_callback(usart_instance,
 								usart_read_callback_cantask1, USART_CALLBACK_BUFFER_RECEIVED);
-		usart_enable_callback(usart_instance, USART_CALLBACK_BUFFER_TRANSMITTED);
-		usart_enable_callback(usart_instance, USART_CALLBACK_BUFFER_RECEIVED);
 	}
+	// valid for both calls as it depends on the usart instance
+	usart_enable_callback(usart_instance, USART_CALLBACK_BUFFER_TRANSMITTED);
+	usart_enable_callback(usart_instance, USART_CALLBACK_BUFFER_RECEIVED);
 }
 
 
@@ -120,6 +119,7 @@ bool check_usart(usart_module_t *usart_instance, uint16_t *rx_char) {
 	usart_read_job(usart_instance, rx_char);
 }
 
+// check if new data was received (set by the callback)
 bool usart_new_data_available(uint8_t cantask_id) {
 
 	if (cantask_id == CANTASK_ID_0) {
@@ -199,7 +199,7 @@ void usb_send(struct usart_module *const module, uint8_t can_task_id) {
 }
 
 
-/**
+/*
  * appends a char to the sequence in the buffer. does not send any data.
  *
  * @param usart_instance

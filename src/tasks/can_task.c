@@ -384,29 +384,33 @@ void vCanTask(void *pvParameters) {
 		bool newdata = usart_new_data_available(cantask_id);
 
 		if (newdata) {
-			xlog((uint8_t *) &usb_rx_char, 1);
+			//xlog((uint8_t *) &usb_rx_char, 2);
+			//c_log('\n');
 			rbyte = (uint8_t) usb_rx_char;
 
 			if (rbyte == CR)    // check for end of command
 			{
+
 				// Execute USB command and return status to terminal
-				usb_putc(exec_usb_cmd(usart_instance,
-															  can_module, cmd_buf, &CAN_flags, &CAN_init_val,cantask_id),cantask_id);
+				usb_putc(exec_usb_cmd(usart_instance, can_module, cmd_buf, &CAN_flags, &CAN_init_val, cantask_id),
+						 cantask_id);
 
 				// flush command buffer
-				for (buf_ind = 0; buf_ind < CMD_BUFFER_LENGTH; buf_ind++)
+				for (buf_ind = 0; buf_ind < CMD_BUFFER_LENGTH; buf_ind++) {
 					cmd_buf[buf_ind] = 0x00;
-
+				}
 				buf_ind = 0;    // point to start of command
 			} else if (rbyte != 0)    // store new char in buffer
 			{
+
+				//c_log('\n');
 				cmd_buf[buf_ind] = (uint8_t)rbyte;    // store char
 				// check for buffer overflow
 				if (buf_ind < sizeof(cmd_buf) - 1)
 					buf_ind++;
 			}
 		}
-		usb_send(usart_instance,cantask_id);
+		usb_send(usart_instance, cantask_id);
 		flush_clog();
 
 		// TODO zero task delay used for rescheduling, to prevent interference between
@@ -852,7 +856,7 @@ uint8_t exec_usb_cmd(usart_module_t *usart_instance, struct can_module *can_inst
 
 			// end with error on unknown commands
 		default:
-			ulog_s("unknown command");
+			ulog_s("unknown command\r\n");
 			return ERROR;
 	}                // end switch
 
