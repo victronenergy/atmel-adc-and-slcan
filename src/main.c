@@ -1,6 +1,6 @@
 #include <asf.h>
 #include <stack_task.h>
-#include <uart_setup.h>
+#include <comm_interface_setup.h>
 #include <board_setup.h>
 #include "stdint.h"
 #include "conf_can.h"

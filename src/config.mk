@@ -58,7 +58,7 @@ CSRCS = ${LIB_CSRCS}\
 		tasks/stack_task.c	\
 		tasks/can_task.c	\
 		utils/board_setup.c \
-		utils/uart_setup.c \
+		utils/comm_interface_setup.c \
 		canbus/usb.c	\
 		
 

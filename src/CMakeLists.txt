@@ -207,8 +207,8 @@ set(SOURCE_FILES
 		config/custom_board_template.h
 		config/custom_board.h
 		utils/board_setup.c
-		utils/uart_setup.c
-		utils/uart_setup.h
+        utils/comm_interface_setup.c
+        utils/comm_interface_setup.h
 		utils/board_setup.h
 		tasks/stack_task.c
 		tasks/stack_task.h

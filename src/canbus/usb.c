@@ -45,15 +45,11 @@
 */
 
 
-/**
+/*
  * usb send buffers
- *
  * There are 2 buffers per CAN task, so 4 buffers in total.
  * The 2 buffers per task prevent problems of simultaneous writing into the buffer while sending data
- *
  */
-
-
 // buffers for can task 0
 uint8_t usb_tx_buffer_0a[64];
 uint8_t usb_tx_buffer_0b[64];
@@ -78,65 +74,66 @@ uint8_t buffer_to_fill_can0 = BUFFER_TO_FILL_A;
 // indicates which buffer (A/B) is used for new chars in can task 1
 uint8_t buffer_to_fill_can1 = BUFFER_TO_FILL_A;
 
-volatile uint8_t received_char;
-volatile bool check = false;
+volatile bool check_cantask0 = false;
+volatile bool check_cantask1 = false;
 
-void usart_read_callback(struct usart_module *const usart_module) {
+void usart_read_callback_cantask0(struct usart_module *const usart_module) {
 
-	check = true;
-	//char *string = "read callback";
-	//usart_write_buffer_job(usart_instance, (uint8_t *) string, strlen(string));
-	//usart_write_buffer_job(usart_module, (uint8_t *)uart_rx_buffer, UART_RX_BUFSIZE);
-	//port_pin_toggle_output_level(LEDPIN_C21_1);
-	//port_pin_set_output_level(LEDPIN_C21_1, false);
+	check_cantask0 = true;
 }
 
-void usart_write_callback(struct usart_module *const usart_module) {
+void usart_read_callback_cantask1(struct usart_module *const usart_module) {
+
+	check_cantask1 = true;
+}
+
+void usart_write_callback_cantask0(struct usart_module *const usart_module) {
 	port_pin_set_output_level(LEDPIN_C21_GREEN, LED_INACTIVE);
 }
 
-void configure_usart_callbacks(usart_module_t *usart_instance) {
-	usart_register_callback(usart_instance,
-							usart_write_callback, USART_CALLBACK_BUFFER_TRANSMITTED);
-	usart_register_callback(usart_instance,
-							usart_read_callback, USART_CALLBACK_BUFFER_RECEIVED);
-	usart_enable_callback(usart_instance, USART_CALLBACK_BUFFER_TRANSMITTED);
-	usart_enable_callback(usart_instance, USART_CALLBACK_BUFFER_RECEIVED);
+void usart_write_callback_cantask1(struct usart_module *const usart_module) {
+	//TODO adapt to other LED than callback0 when available
+	port_pin_set_output_level(LEDPIN_C21_GREEN, LED_INACTIVE);
+}
+
+void configure_usart_callbacks(usart_module_t *usart_instance, uint8_t cantask_id) {
+	if(cantask_id == CANTASK_ID_0) {
+		usart_register_callback(usart_instance,
+								usart_write_callback_cantask0, USART_CALLBACK_BUFFER_TRANSMITTED);
+		usart_register_callback(usart_instance,
+								usart_read_callback_cantask0, USART_CALLBACK_BUFFER_RECEIVED);
+		usart_enable_callback(usart_instance, USART_CALLBACK_BUFFER_TRANSMITTED);
+		usart_enable_callback(usart_instance, USART_CALLBACK_BUFFER_RECEIVED);
+	}else{
+		usart_register_callback(usart_instance,
+								usart_write_callback_cantask1, USART_CALLBACK_BUFFER_TRANSMITTED);
+		usart_register_callback(usart_instance,
+								usart_read_callback_cantask1, USART_CALLBACK_BUFFER_RECEIVED);
+		usart_enable_callback(usart_instance, USART_CALLBACK_BUFFER_TRANSMITTED);
+		usart_enable_callback(usart_instance, USART_CALLBACK_BUFFER_RECEIVED);
+	}
 }
 
 
+// gets called regularly by the cantask to check for new chars via UART
 bool check_usart(usart_module_t *usart_instance, uint16_t *rx_char) {
 	usart_read_job(usart_instance, rx_char);
 }
 
-bool usb_getc(struct usart_module *const usart_module, uint8_t *uart_rx_buffer) {
+bool usart_new_data_available(uint8_t cantask_id) {
 
-	if (check) {
-		check = false;
-		//usart_read_buffer_wait(usart_module, uart_rx_buffer, 1);
-		return true;
+	if (cantask_id == CANTASK_ID_0) {
+		if (check_cantask0) {
+			check_cantask0 = false;
+			return true;
+		}
+	}else{
+		if (check_cantask1) {
+			check_cantask1 = false;
+			return true;
+		}
 	}
 	return false;
-
-	//return uart_rx_buffer[0];
-
-	/*
-	uint8_t rx_byte;
-
-	// check for received characters
-	if ((USB_RX_PIN & _BV (USB_RXF)) != _BV (USB_RXF))	// do if RXF low
-	{
-		USB_TX_PORT &= ~_BV (USB_RD);	// enable RD
-		asm ("NOP");
-		asm ("NOP");
-		asm ("NOP");
-		rx_byte = USB_DATA_PIN;	// get data byte
-		USB_TX_PORT |= _BV (USB_RD);	// disable RD
-		return (rx_byte & 0x7F);	// return ASCII char
-	}
-	else
-
-	return 0;		// return no char*/
 }
 
 /*
@@ -210,7 +207,7 @@ void usb_send(struct usart_module *const module, uint8_t can_task_id) {
  * @param cantask_id
  */
 void
-usb_putc(usart_module_t *usart_instance, uint8_t tx_byte, uint8_t cantask_id) {
+usb_putc(uint8_t tx_byte, uint8_t cantask_id) {
 	// check which task wants to send data
 	if (cantask_id == CANTASK_ID_0) {
 		//append to the buffer that is currently selected for filling
@@ -245,15 +242,15 @@ usb_putc(usart_module_t *usart_instance, uint8_t tx_byte, uint8_t cantask_id) {
 **---------------------------------------------------------------------------
 */
 void
-usb_byte2ascii(usart_module_t *usart_instance, uint8_t tx_byte, uint8_t cantask_id) {
+usb_byte2ascii(uint8_t tx_byte, uint8_t cantask_id) {
 	uint8_t highnibble = (uint8_t) (((tx_byte >> 4) <
 									 10) ? ((tx_byte >> 4) & 0x0f) + 48 : ((tx_byte >> 4) & 0x0f) +
 																		  55);
-	usb_putc(usart_instance, highnibble, cantask_id);
+	usb_putc(highnibble, cantask_id);
 
 	uint8_t lownibble = (uint8_t) (((tx_byte & 0x0f) <
 									10) ? (tx_byte & 0x0f) + 48 : (tx_byte & 0x0f) + 55);
-	usb_putc(usart_instance, lownibble, cantask_id);
+	usb_putc(lownibble, cantask_id);
 }
 
 
@@ -285,7 +282,7 @@ uint8_t ascii2byte(const uint8_t const *val) {
 **---------------------------------------------------------------------------
 */
 void
-usb_puts(usart_module_t *usart_instance, uint8_t *tx_string, uint8_t cantask_id) {
+usb_puts(uint8_t *tx_string, uint8_t cantask_id) {
 	while (*tx_string)
-		usb_putc(usart_instance, *tx_string++, cantask_id);    // send string char by char
+		usb_putc(*tx_string++, cantask_id);    // send string char by char
 }

@@ -3,8 +3,9 @@
 //
 
 #include <samc21_usbcan/samc21_usbcan.h>
-#include "uart_setup.h"
+#include "comm_interface_setup.h"
 
+// debug interface
 void configure_log_uart(usart_module_t *usart_module) {
     struct usart_config config_usart;
     usart_get_config_defaults(&config_usart);
@@ -20,6 +21,7 @@ void configure_log_uart(usart_module_t *usart_module) {
     usart_enable(usart_module);
 }
 
+// usb uart interface associated with can0
 void configure_usbcan0(usart_module_t *usart_module) {
     struct usart_config config_usart;
     usart_get_config_defaults(&config_usart);
@@ -34,7 +36,7 @@ void configure_usbcan0(usart_module_t *usart_module) {
     usart_enable(usart_module);
 }
 
-
+// usb uart interface associated with can1
 void configure_usbcan1(usart_module_t *usart_module) {
 	struct usart_config config_usart;
 	usart_get_config_defaults(&config_usart);
@@ -49,7 +51,7 @@ void configure_usbcan1(usart_module_t *usart_module) {
 	usart_enable(usart_module);
 }
 
-
+// can0 CAN interface
 void configure_can0(struct can_module *can_instance){
 
 	/* Set up the CAN TX/RX pins */
@@ -78,7 +80,7 @@ void configure_can0(struct can_module *can_instance){
 
 }
 
-
+// can1 CAN interface
 void configure_can1(struct can_module *can_instance){
 
 	/* Set up the CAN TX/RX pins */

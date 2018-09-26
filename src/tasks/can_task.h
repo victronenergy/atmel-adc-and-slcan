@@ -39,6 +39,7 @@ TaskHandle_t vCreateCanTask(cantask_params *params);
 // Define CAN standard transfer message setting.
 #define CAN_TX_BUFFER_INDEX    0
 
+//TODO these values are chosen arbitrarily, set appropriate values
 #define HW_VER        0x30		// hardware version
 #define SW_VER        0x40		// software version
 #define SW_VER_MAJOR  0x50    // software major version
@@ -92,34 +93,7 @@ TaskHandle_t vCreateCanTask(cantask_params *params);
 // calculate timer0 overflow value
 #define OCR_VALUE ((unsigned char)((unsigned long)(TIME_STAMP_TICK) / (1000000L / (float)((unsigned long)F_CPU / 64L))))
 
-/*
-// CAN tx message
-extern struct {
-	uint8_t format;		// Extended/Standard Frame
-	uint32_t id;		    // Frame ID
-	uint8_t rtr;		    // RTR/Data Frame
-	uint8_t len;		    // Data Length
-	uint8_t data[8];		// Data Bytes
-} CAN_tx_msg;			      // length 15 byte/each
-// CAN rx message
-extern struct {
-	uint8_t format;		// Extended/Standard Frame
-	uint32_t id;		    // Frame ID
-	uint8_t rtr;		    // RTR/Data Frame
-	uint8_t len;		    // Data Length
-	uint8_t data[8];		// Data Bytes
-} CAN_rx_msg;			      // length 15 byte/each
 
-
-// CAN init values
-extern struct {
-	uint8_t acr[4];
-	uint8_t amr[4];
-	uint8_t btr0;
-	uint8_t btr1;
-	uint8_t fixed_rate;
-} CAN_init_val;
-*/
 //extern volatile uint16_t CAN_flags;
 extern volatile uint8_t last_ecr;
 extern volatile uint8_t last_alc;

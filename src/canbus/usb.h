@@ -45,12 +45,16 @@
 #define USB_RXF  PE0		// FT245BM RXF pin
 
 
-bool usb_getc (usart_module_t *usart_instance, uint8_t *uart_rx_buffer);
-void usb_putc (usart_module_t *usart_instance, uint8_t tx_byte, uint8_t cantask_id);
-void usb_byte2ascii (usart_module_t *usart_instance, uint8_t tx_byte, uint8_t cantask_id);
+bool usart_new_data_available(uint8_t cantask_id);
+void usb_putc (uint8_t tx_byte, uint8_t cantask_id);
+void usb_byte2ascii (uint8_t tx_byte, uint8_t cantask_id);
 uint8_t ascii2byte (const uint8_t const *val);
-void usb_puts (usart_module_t *usart_instance, uint8_t * tx_string, uint8_t cantask_id);
+void usb_puts (uint8_t * tx_string, uint8_t cantask_id);
 void usb_send(struct usart_module *const module, uint8_t can_task_id);
 bool check_usart(usart_module_t *usart_instance, uint16_t *rx_char);
+
+void usart_read_callback_cantask0(struct usart_module *const usart_module);
+void usart_write_callback_cantask0(struct usart_module *const usart_module);
+void configure_usart_callbacks(usart_module_t *usart_instance, uint8_t cantask_id);
 
 #endif // __USB_H__
