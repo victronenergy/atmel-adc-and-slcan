@@ -123,7 +123,7 @@ void clearbit(uint16_t *res, uint8_t bitpos){
 }
 
 uint16_t checkbit(uint16_t *res, uint8_t bitpos){
-	return *res &= bitpos;
+	return *res & bitpos;
 }
 
 
@@ -309,6 +309,7 @@ void vCanTask(void *pvParameters) {
 
 	// cmd buffer stores cmd data to send via USB
 	uint8_t cmd_buf[CMD_BUFFER_LENGTH];
+	memset(cmd_buf, 0x00, CMD_BUFFER_LENGTH);
 	uint8_t buf_ind = 0;
 
 
@@ -324,9 +325,14 @@ void vCanTask(void *pvParameters) {
 	struct CAN_init_val_struct CAN_init_val;
 	set_can_init_values(&CAN_init_val, &CAN_flags);
 
-	check_usart(usart_instance,&usb_rx_char,cantask_id);
+
+	induce_callback(usart_instance, &usb_rx_char, cantask_id);
 
 	for (;;) {
+
+		//TODO remove, should be only set via OPEN_CAN cmd
+		//setbit(&CAN_flags, BUS_ON);
+
 		port_pin_toggle_output_level(PIN_PA11);
 
 		//receive data from CAN bus
@@ -381,39 +387,19 @@ void vCanTask(void *pvParameters) {
 			clearbit(&CAN_flags, MSG_WAITING);
 		}
 
-		uint8_t rbyte = 0;
-		//bool check = check_usart(usart_instance, &usb_rx_char, cantask_id);
-		//bool newdata = usart_new_data_available(cantask_id);
 
-		uint16_t *usb_newchar;
 
-		bool newdata = usart_read_char(usart_instance, &usb_rx_char,usb_newchar, cantask_id);
+		bool new_cmd_available = get_complete_cmd(cmd_buf, cantask_id);
 
-		if (newdata) {
-			xlog((uint8_t *) &usb_newchar, 1);
-			//c_log('\n');
-			rbyte = (uint8_t) usb_newchar;
 
-			if (rbyte == CR)    // check for end of command
-			{
-
-				// Execute USB command and return status to terminal
-				usb_putc(exec_usb_cmd(usart_instance, can_module, cmd_buf, &CAN_flags, &CAN_init_val, cantask_id),
+		if (new_cmd_available) {
+			// Execute USB command and return status to terminal
+			usb_putc(exec_usb_cmd(usart_instance, can_module, cmd_buf, &CAN_flags, &CAN_init_val, cantask_id),
 						 cantask_id);
 
-				// flush command buffer
-				for (buf_ind = 0; buf_ind < CMD_BUFFER_LENGTH; buf_ind++) {
-					cmd_buf[buf_ind] = 0x00;
-				}
-				buf_ind = 0;    // point to start of command
-			} else if (rbyte != 0)    // store new char in buffer
-			{
-
-				//c_log('\n');
-				cmd_buf[buf_ind] = (uint8_t)rbyte;    // store char
-				// check for buffer overflow
-				if (buf_ind < sizeof(cmd_buf) - 1)
-					buf_ind++;
+			// flush command buffer
+			for (buf_ind = 0; buf_ind < CMD_BUFFER_LENGTH; buf_ind++) {
+				cmd_buf[buf_ind] = 0x00;
 			}
 		}
 		usb_send(usart_instance, cantask_id);
@@ -442,7 +428,7 @@ void vCanTask(void *pvParameters) {
  */
 uint8_t exec_usb_cmd(usart_module_t *usart_instance, struct can_module *can_instance, uint8_t *cmd_buf, uint16_t *CAN_flags, struct CAN_init_val_struct *CAN_init_val, uint8_t cantask_id) {
 
-	//ulog_s("EXEC USB CMD");
+	ulog_s("EXEC USB CMD\r\n");
 
 	struct CAN_tx_msg_struct CAN_tx_msg;	// CAN msg to send
 
@@ -453,8 +439,15 @@ uint8_t exec_usb_cmd(usart_module_t *usart_instance, struct can_module *can_inst
 
 	// check if all chars are valid hex chars
 	while (*cmd_buf_pntr) {
-		if (!isxdigit(*cmd_buf_pntr))
+		if(*cmd_buf_pntr == CR){
+			*cmd_buf_pntr = 68;
+		}
+
+		if (!isxdigit(*cmd_buf_pntr)) {
+			ulog_s("invalid byte received via UART");
+			xlog(cmd_buf_pntr,1);
 			return ERROR;
+		}
 		++cmd_buf_pntr;
 	}
 	cmd_buf_pntr = &(*cmd_buf);    // reset pointer
@@ -638,8 +631,10 @@ uint8_t exec_usb_cmd(usart_module_t *usart_instance, struct can_module *can_inst
 		case SEND_R11BIT_ID:
 			ulog_s("send 11bit ID message");
 			// check if CAN controller is in reset mode or busy
-			if (!checkbit(CAN_flags, BUS_ON) || checkbit(CAN_flags, TX_BUSY))
+			if (!checkbit(CAN_flags, BUS_ON) || checkbit(CAN_flags, TX_BUSY)) {
+				ulog_s("\r\nCAN controller in reset mode or busy");
 				return ERROR;
+			}
 			// check valid cmd length (only 5 bytes for RTR)
 			if (cmd_len != 5)
 				return ERROR;
@@ -664,14 +659,16 @@ uint8_t exec_usb_cmd(usart_module_t *usart_instance, struct can_module *can_inst
 		case SEND_11BIT_ID:
 			ulog_s("send 11bit ID message");
 			// check if CAN controller is in reset mode or busy
+			setbit(CAN_flags,BUS_ON);
 			if (!checkbit(CAN_flags, BUS_ON) || checkbit(CAN_flags, TX_BUSY)) {
 				xlog((uint8_t *) &CAN_flags, 2);
-				ulog_s("CAN controller in reset mode or busy");
+				ulog_s("\r\nCAN controller in reset mode or busy");
 				return ERROR;
 			}
 
 			if ((cmd_len < 5) || (cmd_len > 21)) {
 				ulog_s("invalid cmd length");
+				xlog(&cmd_len,1);
 				return ERROR;    // check valid cmd length
 			}
 
@@ -685,9 +682,10 @@ uint8_t exec_usb_cmd(usart_module_t *usart_instance, struct can_module *can_inst
 			CAN_tx_msg.id += ascii2byte(++cmd_buf_pntr);
 			CAN_tx_msg.id <<= 4;
 			CAN_tx_msg.id += ascii2byte(++cmd_buf_pntr);
+
 			// store data length
 			CAN_tx_msg.len = ascii2byte(++cmd_buf_pntr);
-			// check number of data bytes supplied against data lenght byte
+			// check number of data bytes supplied against data length byte
 			if (CAN_tx_msg.len != ((cmd_len - 5) / 2))
 				return ERROR;
 

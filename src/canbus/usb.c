@@ -28,6 +28,9 @@
 
 #include "usb.h"
 
+#define RX_BUF_SIZE 64
+#define TX_BUF_SIZE 64
+
 /*
 **---------------------------------------------------------------------------
 **
@@ -54,15 +57,15 @@ bool callback_pending_1 = false;
  * The 2 buffers per task prevent problems of simultaneous writing into the buffer while sending data
  */
 // buffers for can task 0
-uint8_t usb_tx_buffer_0a[64];
-uint8_t usb_tx_buffer_0b[64];
+uint8_t usb_tx_buffer_0a[TX_BUF_SIZE];
+uint8_t usb_tx_buffer_0b[TX_BUF_SIZE];
 //current positions for can task 0
 uint8_t tx_buf_0a_pos = 0;
 uint8_t tx_buf_0b_pos = 0;
 
 // buffers for can task 1
-uint8_t usb_tx_buffer_1a[64];
-uint8_t usb_tx_buffer_1b[64];
+uint8_t usb_tx_buffer_1a[TX_BUF_SIZE];
+uint8_t usb_tx_buffer_1b[TX_BUF_SIZE];
 //current positions for can task 1
 uint8_t tx_buf_1a_pos = 0;
 uint8_t tx_buf_1b_pos = 0;
@@ -77,18 +80,46 @@ uint8_t buffer_to_fill_can0 = BUFFER_TO_FILL_A;
 // indicates which buffer (A/B) is used for new chars in can task 1
 uint8_t buffer_to_fill_can1 = BUFFER_TO_FILL_A;
 
-volatile bool newdata_cantask0 = false;
-volatile bool newdata_cantask1 = false;
+volatile bool cmd_complete_cantask0 = false;
+volatile bool cmd_complete_cantask1 = false;
 
 uint16_t *rx_glbl_0;
 uint16_t *rx_glbl_1;
 
+uint8_t rx_buffer_0[RX_BUF_SIZE];
+uint8_t rx_buffer_1[RX_BUF_SIZE];
+
+// rx buffers current pos
+uint8_t rx_buffer_0_pos = 0;
+uint8_t rx_buffer_1_pos = 0;
+
+// positions of last command in buffer
+uint8_t rx_buffer_0_cmdbegin = 0;
+uint8_t rx_buffer_0_cmdend = 0;
+uint8_t rx_buffer_1_cmdbegin = 0;
+uint8_t rx_buffer_1_cmdend = 0;
+
+
 void usart_read_callback_cantask0(struct usart_module *const usart_module) {
-	newdata_cantask0 = true;
+	//xlog((uint8_t *)rx_glbl_0,1);
+	rx_buffer_0[rx_buffer_0_pos] = (uint8_t) *rx_glbl_0;
+	if((* (uint8_t *) rx_glbl_0) == CR){
+		rx_buffer_0_cmdend = rx_buffer_0_pos;
+		cmd_complete_cantask0 = true;
+	}
+	rx_buffer_0_pos = (uint8_t) ((++rx_buffer_0_pos) % RX_BUF_SIZE);
+	usart_read_job(usart_module, rx_glbl_0);
 }
 
 void usart_read_callback_cantask1(struct usart_module *const usart_module) {
-	newdata_cantask1 = true;
+	rx_buffer_1[rx_buffer_1_pos] = (uint8_t) *rx_glbl_1;
+	if((* (uint8_t *) rx_glbl_1) == CR){
+		rx_buffer_1_cmdend = rx_buffer_1_pos;
+		cmd_complete_cantask1 = true;
+	}
+	rx_buffer_1_pos = (uint8_t) ((++rx_buffer_1_pos) % RX_BUF_SIZE);
+	cmd_complete_cantask1 = true;
+	usart_read_job(usart_module, rx_glbl_1);
 }
 
 void usart_write_callback_cantask0(struct usart_module *const usart_module) {
@@ -118,71 +149,56 @@ void configure_usart_callbacks(usart_module_t *usart_instance, uint8_t cantask_i
 }
 
 
-bool usart_read_char(usart_module_t *usart_instance, uint16_t *rx_char, uint16_t *rcvd_char, uint8_t cantask_id) {
-	bool retval = false;
-
+// extract cmd from buffer
+bool get_complete_cmd(uint8_t *cmd_buf, uint8_t cantask_id) {
 	if (cantask_id == CANTASK_ID_0) {
-		if (newdata_cantask0) {
-			newdata_cantask0 = false;
-			rx_glbl_0 = rx_char;
-			uint16_t val = *rx_glbl_0;
-			*rcvd_char = val;
-			return usart_read_job(usart_instance, rx_char);
+		if (cmd_complete_cantask0) {
+
+			if(rx_buffer_0_cmdend < rx_buffer_0_cmdbegin){
+				// buffer wrap around, split memcpy necessary
+				uint8_t length = (uint8_t) RX_BUF_SIZE - rx_buffer_0_cmdbegin;
+				memcpy(cmd_buf, (rx_buffer_0 + rx_buffer_0_cmdbegin), length);
+				memcpy(cmd_buf + rx_buffer_0_cmdend, rx_buffer_0, rx_buffer_0_cmdend);
+			}else{
+				//regular memcpy
+				uint8_t length = (uint8_t) (rx_buffer_0_cmdend - rx_buffer_0_cmdbegin + 1);
+				memcpy(cmd_buf, (rx_buffer_0 + rx_buffer_0_cmdbegin), length);
+			}
+			rx_buffer_0_cmdbegin = (uint8_t) ((rx_buffer_0_cmdend + 1) % RX_BUF_SIZE);
+			cmd_complete_cantask0 = false;
 			return true;
 		}
 	}else{
-		if (newdata_cantask1) {
-			newdata_cantask1 = false;
-			rx_glbl_1 = rx_char;
-			uint16_t val = *rx_glbl_1;
-			*rcvd_char = val;
-			return usart_read_job(usart_instance, rx_char);
-			return true;
-		}
-	}
-	return retval;
-}
+		if (cmd_complete_cantask1) {
 
-
-// gets called regularly by the cantask to check for new chars via UART
-bool check_usart(usart_module_t *usart_instance, uint16_t *rx_char, uint8_t cantask_id) {
-
-		return usart_read_job(usart_instance, rx_char);
-	/*
-	if (cantask_id == CANTASK_ID_0) {
-		if(callback_pending_0) {
-			callback_pending_0 = false;
-		}else{
-			return usart_read_job(usart_instance, rx_char);
-			callback_pending_0 = true;
-		}
-	}else{
-		if(callback_pending_1) {
-			callback_pending_1 = false;
-		}else{
-			return usart_read_job(usart_instance, rx_char);
-			callback_pending_1 = true;
-		}
-	}
-	return false;*/
-}
-
-// check if new data was received (set by the callback)
-bool usart_new_data_available(uint8_t cantask_id) {
-
-	if (cantask_id == CANTASK_ID_0) {
-		if (newdata_cantask0) {
-			newdata_cantask0 = false;
-			return true;
-		}
-	}else{
-		if (newdata_cantask1) {
-			newdata_cantask1 = false;
+			if(rx_buffer_1_cmdend < rx_buffer_1_cmdbegin){
+				// buffer wrap around, split memcpy necessary
+				uint8_t length = (uint8_t) RX_BUF_SIZE - rx_buffer_1_cmdbegin;
+				memcpy(cmd_buf, (rx_buffer_1 + rx_buffer_1_cmdbegin), length);
+				memcpy(cmd_buf + rx_buffer_1_cmdend, rx_buffer_1, rx_buffer_1_cmdend);
+			}else{
+				//regular memcpy
+				uint8_t length = (uint8_t) (rx_buffer_1_cmdend - rx_buffer_1_cmdbegin + 1);
+				memcpy(cmd_buf, (rx_buffer_1 + rx_buffer_1_cmdbegin), length);
+			}
+			rx_buffer_1_cmdbegin = (uint8_t) ((rx_buffer_1_cmdend + 1) % RX_BUF_SIZE);
+			cmd_complete_cantask1 = false;
 			return true;
 		}
 	}
 	return false;
 }
+
+bool induce_callback(usart_module_t *usart_instance,uint16_t *rx_char, uint8_t cantask_id){
+	if(cantask_id == CANTASK_ID_0) {
+		rx_glbl_0 = rx_char;
+		return usart_read_job(usart_instance, rx_glbl_0);
+	}else{
+		rx_glbl_1 = rx_char;
+		return usart_read_job(usart_instance, rx_glbl_1);
+	}
+}
+
 
 /*
 **---------------------------------------------------------------------------
