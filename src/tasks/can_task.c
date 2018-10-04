@@ -6,7 +6,7 @@
 #include "can_task.h"
 #include "usb.h"
 #include <ctype.h>
-#include <samc21_usbcan/samc21_usbcan.h>
+#include <samc21_usbcan.h>
 #include <cmsis/samc21/include/component/can.h>
 
 #define PeliCANMode

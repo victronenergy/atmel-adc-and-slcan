@@ -2,7 +2,7 @@
 // Created by stekreis on 14.03.18.
 //
 
-#include <samc21_usbcan/samc21_usbcan.h>
+#include <samc21_usbcan.h>
 #include "comm_interface_setup.h"
 
 // debug interface

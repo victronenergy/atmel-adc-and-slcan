@@ -23,7 +23,7 @@
 //
 //*****************************************************************************
 #include <stdint.h>
-#include <samc21_usbcan/samc21_usbcan.h>
+#include <samc21_usbcan.h>
 #include <can_task.h>
 
 #include "usb.h"
