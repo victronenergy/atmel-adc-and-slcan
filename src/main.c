@@ -2,6 +2,7 @@
 #include <stack_task.h>
 #include <comm_interface_setup.h>
 #include <board_setup.h>
+#include <samc21_usbcan.h>
 #include "stdint.h"
 #include "conf_can.h"
 #include "can_task.h"
@@ -35,21 +36,18 @@ int main(void) {
 	 */
 	configure_log_uart(&debug_ulog);
 
-	configure_can0(&can0_instance);
-	configure_can1(&can1_instance);
-
-	configure_usbcan0(&usbcan0_instance);
-	configure_usbcan1(&usbcan1_instance);
+	configure_uart_can0(&usbcan0_instance);
+	configure_uart_can1(&usbcan1_instance);
 
 	cantask_params params_task0;
 	params_task0.task_id = CANTASK_ID_0;
 	params_task0.usart_instance = &usbcan0_instance;
-	params_task0.can_instance = &can0_instance;
+	params_task0.can_instance = CAN0_MODULE;
 
 	cantask_params params_task1;
 	params_task1.task_id = CANTASK_ID_1;
 	params_task1.usart_instance = &usbcan1_instance;
-	params_task1.can_instance = &can1_instance;
+	params_task1.can_instance = CAN1_MODULE;
 
 	/*
 	 * Global Interrupts Enable!

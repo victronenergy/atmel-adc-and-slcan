@@ -89,7 +89,7 @@ TaskHandle_t vCreateStackTask(TaskHandle_t *handles[], uint8_t count) {
 
 	if( xReturned == pdPASS )
 	{
-		ulog_s("\r\nsuccessfully created Stack Task\r\n");
+		ulog_s("successfully created Stack Task\r\n");
 
 		/* The task was created.  Use the task's handle to delete the task. */
 		//vTaskDelete( xHandle );

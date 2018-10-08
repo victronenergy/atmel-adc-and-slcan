@@ -11,7 +11,7 @@
 typedef struct {
 	uint8_t task_id;
 	usart_module_t *usart_instance;
-	struct can_module *can_instance;
+	Can *can_instance;
 } cantask_params;
 
 TaskHandle_t vCreateCanTask(cantask_params *params);
@@ -88,7 +88,7 @@ TaskHandle_t vCreateCanTask(cantask_params *params);
 	---
 	27 byte
 */
-#define CMD_BUFFER_LENGTH  30
+#define CMD_BUFFER_LENGTH  32
 
 // calculate timer0 overflow value
 #define OCR_VALUE ((unsigned char)((unsigned long)(TIME_STAMP_TICK) / (1000000L / (float)((unsigned long)F_CPU / 64L))))
