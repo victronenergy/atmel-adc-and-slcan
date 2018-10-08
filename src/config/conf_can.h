@@ -50,22 +50,22 @@
  * Below is the message RAM setting, it will be stored in the system RAM.
  * Please adjust the message size according to your application.
  */
-#define CONF_CAN0_RX_FIFO_0_NUM         16            /* Range: 1..64 */ 
-#define CONF_CAN0_RX_FIFO_1_NUM         16            /* Range: 1..64 */ 
-#define CONF_CAN0_RX_BUFFER_NUM         16            /* Range: 1..64 */ 
-#define CONF_CAN0_TX_BUFFER_NUM         4             /* Range: 1..16 */ 
-#define CONF_CAN0_TX_FIFO_QUEUE_NUM     4             /* Range: 1..16 */ 
-#define CONF_CAN0_TX_EVENT_FIFO         8             /* Range: 1..32 */ 
+#define CONF_CAN0_RX_FIFO_0_NUM         32            /* Range: 1..64 */
+#define CONF_CAN0_RX_FIFO_1_NUM         32            /* Range: 1..64 */
+#define CONF_CAN0_RX_BUFFER_NUM         0            /* Range: 1..64 */
+#define CONF_CAN0_TX_BUFFER_NUM         0             /* Range: 1..16 */
+#define CONF_CAN0_TX_FIFO_QUEUE_NUM     32             /* Range: 1..16 */
+#define CONF_CAN0_TX_EVENT_FIFO         0             /* Range: 1..32 */
 
 #define CONF_CAN0_RX_STANDARD_ID_FILTER_NUM     32    /* Range: 1..128 */ 
 #define CONF_CAN0_RX_EXTENDED_ID_FILTER_NUM     16    /* Range: 1..64 */ 
 
-#define CONF_CAN1_RX_FIFO_0_NUM         16            /* Range: 1..64 */ 
-#define CONF_CAN1_RX_FIFO_1_NUM         16            /* Range: 1..64 */ 
-#define CONF_CAN1_RX_BUFFER_NUM         16            /* Range: 1..64 */ 
-#define CONF_CAN1_TX_BUFFER_NUM         4             /* Range: 1..16 */ 
-#define CONF_CAN1_TX_FIFO_QUEUE_NUM     4             /* Range: 1..16 */ 
-#define CONF_CAN1_TX_EVENT_FIFO         8             /* Range: 1..32 */ 
+#define CONF_CAN1_RX_FIFO_0_NUM         32            /* Range: 1..64 */
+#define CONF_CAN1_RX_FIFO_1_NUM         32            /* Range: 1..64 */
+#define CONF_CAN1_RX_BUFFER_NUM         0            /* Range: 1..64 */
+#define CONF_CAN1_TX_BUFFER_NUM         0             /* Range: 1..16 */
+#define CONF_CAN1_TX_FIFO_QUEUE_NUM     32             /* Range: 1..16 */
+#define CONF_CAN1_TX_EVENT_FIFO         0             /* Range: 1..32 */
 
 #define CONF_CAN1_RX_STANDARD_ID_FILTER_NUM     32    /* Range: 1..128 */ 
 #define CONF_CAN1_RX_EXTENDED_ID_FILTER_NUM     16    /* Range: 1..64 */ 
@@ -80,7 +80,7 @@
  * quanta which means the bit rate is 8MHz / 16 = 500KHz.
  */
 /* Nominal bit Baud Rate Prescaler */
-#define CONF_CAN_NBTP_NBRP_VALUE    5
+#define CONF_CAN_NBTP_NBRP_VALUE    3 //(5) 3-> 16MHz/(3+1) = 4Mhz / 16 = 250k
 /* Nominal bit (Re)Synchronization Jump Width */
 #define CONF_CAN_NBTP_NSJW_VALUE    3
 /* Nominal bit Time segment before sample point */
@@ -95,7 +95,7 @@
  * quanta which means the bit rate is 8MHz / 16 = 500KHz.
  */
 /* Data bit Baud Rate Prescaler */
-#define CONF_CAN_DBTP_DBRP_VALUE    5
+#define CONF_CAN_DBTP_DBRP_VALUE    3 //(5) 3-> 16MHz/(3+1) = 4Mhz / 16 = 250k
 /* Data bit (Re)Synchronization Jump Width */
 #define CONF_CAN_DBTP_DSJW_VALUE    3
 /* Data bit Time segment before sample point */
