@@ -22,6 +22,13 @@ void system_board_init(void);
 #define BOARD_OSC_STARTUP_US      15625
 /** @} */
 
+/**
+ * \name HW Rev detection Pins
+ */
+#define HW_REV_DETECTION_0            PIN_PA02
+#define HW_REV_DETECTION_1            PIN_PA03
+#define HW_REV_DETECTION_2            PIN_PA04
+
 /** \name LED definitions
  *
  */

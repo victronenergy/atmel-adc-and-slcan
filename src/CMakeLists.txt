@@ -203,6 +203,7 @@ set(SOURCE_FILES
 		main.c
 		config/asf.h
 		config/conf_clocks.h
+		config/conf_can.h
 		config/FreeRTOSConfig.h
 		config/custom_board_template.h
 		config/custom_board.h
@@ -218,6 +219,7 @@ set(SOURCE_FILES
 		canbus/usb.h
 		canbus/usb.c
 		)
+
 
 
 include_directories(lib/ASF/common/boards)

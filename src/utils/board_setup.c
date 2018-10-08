@@ -1,6 +1,7 @@
 #include <asf.h>
 #include <board_setup.h>
 #include <log.h>
+#include <samc21_usbcan.h>
 
 // PROTOTYPES
 void vApplicationStackOverflowHook(TaskHandle_t *pxTask, signed portCHAR *pcTaskName);
@@ -34,21 +35,35 @@ void board_init(void) {
 	port_get_config_defaults(&debug_port);
 
 	debug_port.direction  = PORT_PIN_DIR_OUTPUT;
+//	task0
 	port_pin_set_config(PIN_PA11, &debug_port);
+	port_pin_set_config(PIN_PA10, &debug_port);
+//	task1
+	port_pin_set_config(PIN_PA25, &debug_port);
+	port_pin_set_config(PIN_PA24, &debug_port);
+
+	/* Set up the CAN TX/RX pins */
+	struct system_pinmux_config pin_config;
+	system_pinmux_get_config_defaults(&pin_config);
+	pin_config.mux_position = CAN0_TX_MUX_SETTING;
+	system_pinmux_pin_set_config(CAN0_TX_PIN, &pin_config);
+	pin_config.mux_position = CAN0_RX_MUX_SETTING;
+	system_pinmux_pin_set_config(CAN0_RX_PIN, &pin_config);
+	pin_config.mux_position = CAN1_TX_MUX_SETTING;
+	system_pinmux_pin_set_config(CAN1_TX_PIN, &pin_config);
+	pin_config.mux_position = CAN1_RX_MUX_SETTING;
+	system_pinmux_pin_set_config(CAN1_RX_PIN, &pin_config);
 
 
 }
 
 uint8_t readHWrev(void) {
-    /*
-     *
-
 	uint8_t rev = 0;
     struct port_config pin_conf;
     port_get_config_defaults(&pin_conf);
 
     /* Set buttons as inputs */
-    /*
+
 	pin_conf.direction  = PORT_PIN_DIR_INPUT;
     pin_conf.input_pull = PORT_PIN_PULL_DOWN;
     pin_conf.powersave = false;
@@ -69,7 +84,4 @@ uint8_t readHWrev(void) {
     port_pin_set_config(HW_REV_DETECTION_2, &pin_conf);
 
     return rev;
-     */
-	//TODO put HW rev detection back in
-	return 0;
 }
