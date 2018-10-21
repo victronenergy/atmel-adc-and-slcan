@@ -170,7 +170,7 @@ uint8_t transmit_CAN(struct can_module *const can_module, struct can_tx_element 
 			c_log_s("E2");
 			return ERROR;
 		}
-		return CR;
+		return NO_RETURN;
 	} else {
 		c_log_s("E3");
 		return ERROR;
@@ -358,9 +358,11 @@ void vCanTask(void *pvParameters) {
 //			ulog_s(" new: ");
 //			xlog((uint8_t *) &buf_num,1);
 			// Execute USB command and return status to terminal
-			usb_putc(exec_usb_cmd(&can_module, can_instance, buf, &CAN_flags, &CAN_init_val, cantask_id, &can_bitrate), cantask_id);
-			usb_send(usart_instance, cantask_id);
-
+			uint8_t r = exec_usb_cmd(&can_module, can_instance, buf, &CAN_flags, &CAN_init_val, cantask_id, &can_bitrate);
+			if (r == NO_RETURN) { // check if we have to send something back to the host.
+				usb_putc(r, cantask_id);
+				usb_send(usart_instance, cantask_id);
+			}
 			// flush command buffer
 			clear_cmd_buf(cantask_id, buf_num);
 		}

@@ -47,11 +47,15 @@ TaskHandle_t vCreateCanTask(cantask_params *params);
 #define SERIAL        "2821"	// device serial number
 
 #if !defined(CR)
-#define CR            13	// command end tag (ASCII CR)
+#define CR				13	// command end tag (ASCII CR)
 #endif
 
 #if !defined(ERROR)
-#define ERROR         7		// error tag (ASCII BEL)
+#define ERROR			7	// error tag (ASCII BEL)
+#endif
+
+#if !defined(NO_RETURN)
+#define NO_RETURN		0	// will be used to indicate that no answer should be send!
 #endif
 
 #define SET_BITRATE     'S'	// set CAN bit rate
