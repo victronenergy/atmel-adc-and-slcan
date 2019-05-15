@@ -2,7 +2,7 @@
 // Created by stekreis on 14.03.18.
 //
 
-#include <samc21_usbcan.h>
+#include <samc21_slcan_adc.h>
 #include "comm_interface_setup.h"
 
 // debug interface
@@ -11,7 +11,6 @@ void configure_log_uart(usart_module_t *usart_module) {
     usart_get_config_defaults(&config_usart);
     config_usart.baudrate = 115200;
     config_usart.generator_source = GCLK_GENERATOR_1;
-
 	config_usart.mux_setting = EDBG_CDC_SERCOM_MUX_SETTING;
 	config_usart.pinmux_pad0 = EDBG_CDC_SERCOM_PINMUX_PAD0;
 	config_usart.pinmux_pad1 = EDBG_CDC_SERCOM_PINMUX_PAD1;
@@ -25,30 +24,14 @@ void configure_log_uart(usart_module_t *usart_module) {
 void configure_uart_can0(usart_module_t *usart_module) {
     struct usart_config config_usart;
     usart_get_config_defaults(&config_usart);
-    config_usart.baudrate = 460800;
+    config_usart.baudrate = 750000;
     config_usart.generator_source = GCLK_GENERATOR_1;
 	config_usart.mux_setting = USBCAN0_UART_MUX_SETTING;
 	config_usart.pinmux_pad0 = USBCAN0_UART_PINMUX_PAD0;
 	config_usart.pinmux_pad1 = USBCAN0_UART_PINMUX_PAD1;
 	config_usart.pinmux_pad2 = USBCAN0_UART_PINMUX_PAD2;
 	config_usart.pinmux_pad3 = USBCAN0_UART_PINMUX_PAD3;
+
 	while (usart_init(usart_module, USBCAN0_UART_MODULE, &config_usart) != STATUS_OK) {}
     usart_enable(usart_module);
 }
-
-// usb uart interface associated with can1
-void configure_uart_can1(usart_module_t *usart_module) {
-	struct usart_config config_usart;
-	usart_get_config_defaults(&config_usart);
-	config_usart.baudrate = 460800;
-	config_usart.generator_source = GCLK_GENERATOR_1;
-	config_usart.mux_setting = USBCAN1_UART_MUX_SETTING;
-	config_usart.pinmux_pad0 = USBCAN1_UART_PINMUX_PAD0;
-	config_usart.pinmux_pad1 = USBCAN1_UART_PINMUX_PAD1;
-	config_usart.pinmux_pad2 = USBCAN1_UART_PINMUX_PAD2;
-	config_usart.pinmux_pad3 = USBCAN1_UART_PINMUX_PAD3;
-	while (usart_init(usart_module, USBCAN1_UART_MODULE, &config_usart) != STATUS_OK) {}
-	usart_enable(usart_module);
-}
-
-

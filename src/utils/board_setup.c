@@ -1,7 +1,6 @@
 #include <asf.h>
 #include <board_setup.h>
 #include <log.h>
-#include <samc21_usbcan.h>
 
 // PROTOTYPES
 void vApplicationStackOverflowHook(TaskHandle_t *pxTask, signed portCHAR *pcTaskName);
@@ -36,11 +35,9 @@ void board_init(void) {
 
 	debug_port.direction  = PORT_PIN_DIR_OUTPUT;
 //	task0
-	port_pin_set_config(PIN_PA11, &debug_port);
-	port_pin_set_config(PIN_PA10, &debug_port);
-//	task1
-	port_pin_set_config(PIN_PA25, &debug_port);
-	port_pin_set_config(PIN_PA24, &debug_port);
+	port_pin_set_config(PIN_PA15, &debug_port);
+	port_pin_set_config(PIN_PA14, &debug_port);
+
 
 	/* Set up the CAN TX/RX pins */
 	struct system_pinmux_config pin_config;
@@ -49,11 +46,6 @@ void board_init(void) {
 	system_pinmux_pin_set_config(CAN0_TX_PIN, &pin_config);
 	pin_config.mux_position = CAN0_RX_MUX_SETTING;
 	system_pinmux_pin_set_config(CAN0_RX_PIN, &pin_config);
-	pin_config.mux_position = CAN1_TX_MUX_SETTING;
-	system_pinmux_pin_set_config(CAN1_TX_PIN, &pin_config);
-	pin_config.mux_position = CAN1_RX_MUX_SETTING;
-	system_pinmux_pin_set_config(CAN1_RX_PIN, &pin_config);
-
 
 }
 

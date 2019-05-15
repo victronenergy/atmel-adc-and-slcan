@@ -208,6 +208,7 @@ set(SOURCE_FILES
 		config/custom_board_template.h
 		config/custom_board.h
 		config/samc21_usbcan.h
+		config/samc21_slcan_adc.h
 		utils/board_setup.c
         utils/comm_interface_setup.c
         utils/comm_interface_setup.h
@@ -266,8 +267,9 @@ include_directories(canbus)
 include_directories(.)
 
 add_definitions(-D ARM_MATH_CM0PLUS=true)
-add_definitions(-D BOARD=GRIDLESS_conv_ve_bus_A1)
-add_definitions(-D __SAMC21J18A__)
+add_definitions(-D BOARD=USER_BOARD)
+add_definitions(-D CUSTOM_BOARD=PENTA_SLCAN_ADC)
+add_definitions(-D __SAMC21G18A__)
 add_definitions(-D USART_CALLBACK_MODE=true)
 add_definitions(-D __FREERTOS__)
 add_definitions(-D SYSTICK_MODE)

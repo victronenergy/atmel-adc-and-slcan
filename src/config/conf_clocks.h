@@ -55,7 +55,7 @@
 #  define CONF_CLOCK_OSC48M_RUN_IN_STANDBY        true
 
 /* SYSTEM_CLOCK_SOURCE_XOSC configuration - External clock/oscillator */
-#  define CONF_CLOCK_XOSC_ENABLE                  true
+#  define CONF_CLOCK_XOSC_ENABLE                  false
 #  define CONF_CLOCK_XOSC_EXTERNAL_CRYSTAL        SYSTEM_CLOCK_EXTERNAL_CRYSTAL
 #  define CONF_CLOCK_XOSC_EXTERNAL_FREQUENCY      16000000UL
 #  define CONF_CLOCK_XOSC_STARTUP_TIME            SYSTEM_XOSC_STARTUP_32768
@@ -128,8 +128,8 @@
 /* Configure GCLK generator 1 */
 #  define CONF_CLOCK_GCLK_1_ENABLE                true
 #  define CONF_CLOCK_GCLK_1_RUN_IN_STANDBY        true
-#  define CONF_CLOCK_GCLK_1_CLOCK_SOURCE          SYSTEM_CLOCK_SOURCE_XOSC
-#  define CONF_CLOCK_GCLK_1_PRESCALER             1								// this will generate 16MHz clock
+#  define CONF_CLOCK_GCLK_1_CLOCK_SOURCE          SYSTEM_CLOCK_SOURCE_OSC48M
+#  define CONF_CLOCK_GCLK_1_PRESCALER             3								// this will generate 16MHz clock
 #  define CONF_CLOCK_GCLK_1_OUTPUT_ENABLE         false
 
 /* Configure GCLK generator 2  */
@@ -177,8 +177,8 @@
 /* Configure GCLK generator 8 */
 #  define CONF_CLOCK_GCLK_8_ENABLE                true
 #  define CONF_CLOCK_GCLK_8_RUN_IN_STANDBY        true
-#  define CONF_CLOCK_GCLK_8_CLOCK_SOURCE          SYSTEM_CLOCK_SOURCE_XOSC
-#  define CONF_CLOCK_GCLK_8_PRESCALER             1								// this will generate 16MHz clock
+#  define CONF_CLOCK_GCLK_8_CLOCK_SOURCE          SYSTEM_CLOCK_SOURCE_OSC48M
+#  define CONF_CLOCK_GCLK_8_PRESCALER             3								// this will generate 16MHz clock
 #  define CONF_CLOCK_GCLK_8_OUTPUT_ENABLE         false
 #endif /* CONF_CLOCKS_H_INCLUDED */
 

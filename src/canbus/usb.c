@@ -23,7 +23,6 @@
 //
 //*****************************************************************************
 #include <stdint.h>
-#include <samc21_usbcan.h>
 #include <can_task.h>
 
 #include "usb.h"
@@ -44,6 +43,7 @@
 **---------------------------------------------------------------------------
 */
 
+void usart_read_callback(struct usart_module *const usart_module, uint8_t cantask_id);
 void usart_read_callback_cantask0(struct usart_module *const usart_module);
 void usart_write_callback_cantask0(struct usart_module *const usart_module);
 void usart_read_callback_cantask1(struct usart_module *const usart_module);
@@ -53,13 +53,37 @@ void usart_write_callback_cantask1(struct usart_module *const usart_module);
 usart_buf_t *usart_buf_can0 = NULL;
 usart_buf_t *usart_buf_can1 = NULL;
 
+void usart_read_callback(struct usart_module *const usart_module, uint8_t cantask_id) {
+	usart_buf_t *buf;
+	if (cantask_id == CANTASK_ID_0) {
+		buf = usart_buf_can0;
+	} else {
+		buf = usart_buf_can1;
+	}
+	if (buf == NULL) {
+		return;
+	}
+	if((buf->usart_buf_rx[buf->fill_rx][buf->rx_insert_pos]) == CR){
+		taskENTER_CRITICAL();
+		buf->usart_buf_rx[buf->fill_rx][buf->rx_insert_pos] = 0; // remove CR from receive buffer!
+		buf->rx_pending_map |=  (1 << buf->fill_rx);
+		if (buf->rx_pending_map & ((buf->fill_rx + 1) % USB_CMD_BUF_COUNT)) {
+			//if this happens the commands are not processed fast enough and we are now starting to overwrite the last stored command!
+			buf->buf_overrun = true;
+		}
+		buf->fill_rx = (uint8_t) ((buf->fill_rx + 1) % USB_CMD_BUF_COUNT);
+		buf->rx_insert_pos = -1;
+		taskEXIT_CRITICAL();
+	}
+	buf->rx_insert_pos = (uint8_t) ((buf->rx_insert_pos + 1) % USB_CMD_BUF_SIZE);
+	usart_read_job(usart_module, (uint16_t *) &(buf->usart_buf_rx[buf->fill_rx][buf->rx_insert_pos]));
+
+}
+
 void usart_read_callback_cantask0(struct usart_module *const usart_module) {
-//	port_pin_set_output_level(PIN_PA10, true);
 	if (usart_buf_can0 == NULL) {
 		return;
 	}
-//	port_pin_set_output_level(PIN_PA10, false);
-//	port_pin_set_output_level(PIN_PA10, true);
 	if((usart_buf_can0->usart_buf_rx[usart_buf_can0->fill_rx][usart_buf_can0->rx_insert_pos]) == CR){
 		taskENTER_CRITICAL();
 		usart_buf_can0->usart_buf_rx[usart_buf_can0->fill_rx][usart_buf_can0->rx_insert_pos] = 0; // remove CR from receive buffer!
@@ -72,13 +96,8 @@ void usart_read_callback_cantask0(struct usart_module *const usart_module) {
 		usart_buf_can0->rx_insert_pos = -1;
 		taskEXIT_CRITICAL();
 	}
-//	port_pin_set_output_level(PIN_PA10, false);
-//	port_pin_set_output_level(PIN_PA10, true);
 	usart_buf_can0->rx_insert_pos = (uint8_t) ((usart_buf_can0->rx_insert_pos + 1) % USB_CMD_BUF_SIZE);
-//	port_pin_set_output_level(PIN_PA10, false);
-//	port_pin_set_output_level(PIN_PA10, true);
 	usart_read_job(usart_module, (uint16_t *) &(usart_buf_can0->usart_buf_rx[usart_buf_can0->fill_rx][usart_buf_can0->rx_insert_pos]));
-//	port_pin_set_output_level(PIN_PA10, false);
 }
 
 void usart_read_callback_cantask1(struct usart_module *const usart_module) {
@@ -173,7 +192,7 @@ enum_usb_return_t get_complete_cmd(uint8_t **cmd_buf, uint32_t *buf_num, uint8_t
 	if (buf == NULL) {
 		return USB_ERROR;
 	}
-//	ulog_s(" map: ");
+//	ulog_s("\r\nmap: ");
 //	xlog((uint8_t *) &buf->rx_pending_map, 1);
 //	ulog_s(" fill: ");
 //	xlog(&buf->fill_rx, 1);
@@ -185,11 +204,11 @@ enum_usb_return_t get_complete_cmd(uint8_t **cmd_buf, uint32_t *buf_num, uint8_t
 		*cmd_buf = buf->usart_buf_rx[pos];
 		*buf_num = pos;
 
-/*		ulog_s("\r\nBUF0: ");
-		xlog(buf->usart_buf_rx[0], CMD_BUFFER_LENGTH);
-		ulog_s("\r\nBUF1: ");
-		xlog(buf->usart_buf_rx[1], CMD_BUFFER_LENGTH);
-		c_log('n');*/
+//		ulog_s("\r\nBUF0: ");
+//		xlog(buf->usart_buf_rx[0], CMD_BUFFER_LENGTH);
+//		ulog_s("\r\nBUF1: ");
+//		xlog(buf->usart_buf_rx[1], CMD_BUFFER_LENGTH);
+//		c_log('n');
 
 		if (buf->buf_overrun) {
 			//TODO test overflow
@@ -197,7 +216,6 @@ enum_usb_return_t get_complete_cmd(uint8_t **cmd_buf, uint32_t *buf_num, uint8_t
 			return BUF_OVERRUN;
 		}
 		return NEW_CMD;
-
 	}
 	return NO_CMD;
 }
@@ -246,7 +264,7 @@ bool start_canbus_usart(usart_module_t *usart_instance, usart_buf_t *buf_struct,
 	buf_struct->fill_tx = 0;
 	buf_struct->read_rx = 0;
 	buf_struct->read_tx = 0;
-	for (uint32_t i = 0; i < USB_CMD_BUF_COUNT; i++) {
+	for (uint8_t i = 0; i < USB_CMD_BUF_COUNT; i++) {
 		memset(buf_struct->usart_buf_rx[i], 0x00, USB_CMD_BUF_SIZE);
 		memset(buf_struct->usart_buf_tx[i], 0x00, USB_CMD_BUF_SIZE);
 		buf_struct->buf_tx_len[i] = 0;

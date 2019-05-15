@@ -2,7 +2,7 @@
 #include <stack_task.h>
 #include <comm_interface_setup.h>
 #include <board_setup.h>
-#include <samc21_usbcan.h>
+#include <samc21_slcan_adc.h>
 #include "stdint.h"
 #include "conf_can.h"
 #include "can_task.h"
@@ -25,10 +25,6 @@ int main(void) {
 	 */
 	usart_module_t debug_ulog;
 	usart_module_t usbcan0_instance;
-	usart_module_t usbcan1_instance;
-
-	struct can_module can0_instance;
-	struct can_module can1_instance;
 
 
 	/*
@@ -37,17 +33,11 @@ int main(void) {
 	configure_log_uart(&debug_ulog);
 
 	configure_uart_can0(&usbcan0_instance);
-	configure_uart_can1(&usbcan1_instance);
 
 	cantask_params params_task0;
 	params_task0.task_id = CANTASK_ID_0;
 	params_task0.usart_instance = &usbcan0_instance;
 	params_task0.can_instance = CAN0_MODULE;
-
-	cantask_params params_task1;
-	params_task1.task_id = CANTASK_ID_1;
-	params_task1.usart_instance = &usbcan1_instance;
-	params_task1.can_instance = CAN1_MODULE;
 
 	/*
 	 * Global Interrupts Enable!
@@ -63,10 +53,8 @@ int main(void) {
 	ulog_s("prepare Tasks\r\n");
 	TaskHandle_t task_handles[2];
 	TaskHandle_t can_task0 = vCreateCanTask(&params_task0);
-	TaskHandle_t can_task1 = vCreateCanTask(&params_task1);
 	task_handles[0] = &can_task0;
-	task_handles[1] = &can_task1;
-	vCreateStackTask((TaskHandle_t **) &task_handles, 2);
+	vCreateStackTask((TaskHandle_t **) &task_handles, 1);
 
 	ulog_s("start scheduler\r\n");
 	vTaskStartScheduler();
