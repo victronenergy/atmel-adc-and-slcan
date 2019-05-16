@@ -9,7 +9,8 @@
 #include <usb.h>
 #include <cmsis/samc21/include/component/can.h>
 #include <can.h>
-
+#include "slcan.h"
+#include "uart_commands.h"
 #define PeliCANMode
 
 
@@ -95,7 +96,7 @@ volatile uint8_t last_alc;
  * Prototypes
  */
 void vCanTask(void *pvParameters);
-uint8_t exec_usb_cmd(struct can_module *can_module, Can *can_instance, uint8_t *cmd_buf, uint16_t *CAN_flags, struct CAN_init_val_struct *CAN_init_val, uint8_t cantask_id, uint32_t *bitrate);
+uart_command_return_t exec_uart_cmd(struct can_module *can_module, Can *can_instance, uint8_t *cmd_buf, uint16_t *CAN_flags, struct CAN_init_val_struct *CAN_init_val, uint8_t cantask_id, uint32_t *can_bitrate);
 void can_send_standard_message(struct can_module *can_instance, uint32_t id_value, uint8_t *data);
 uint8_t reset_can_errorflags(uint16_t *CAN_flags);
 uint8_t transmit_CAN(struct can_module *const can_module, struct can_tx_element *tx_element);
@@ -152,7 +153,7 @@ void setup_can_instance(struct can_module *can_module, Can *can_hw, uint32_t bit
 
 uint8_t reset_can_errorflags(uint16_t *CAN_flags) {
 	port_pin_set_output_level(LEDPIN_C21_RED, LED_INACTIVE);
-	return CR;
+	return RETURN_CR;
 }
 
 uint8_t transmit_CAN(struct can_module *const can_module, struct can_tx_element *tx_element) {
@@ -163,17 +164,17 @@ uint8_t transmit_CAN(struct can_module *const can_module, struct can_tx_element 
 		status = can_set_tx_buffer_element(can_module, tx_element, fifo_put_index);
 		if (status != STATUS_OK) {
 			c_log_s("E1");
-			return ERROR;
+			return RETURN_ERROR;
 		}
 		status = can_tx_transfer_request(can_module, 1u << fifo_put_index);
 		if (status != STATUS_OK) {
 			c_log_s("E2");
-			return ERROR;
+			return RETURN_ERROR;
 		}
 		return NO_RETURN;
 	} else {
 		c_log_s("E3");
-		return ERROR;
+		return RETURN_ERROR;
 	}
 
 }
@@ -363,14 +364,16 @@ void vCanTask(void *pvParameters) {
 //			ulog_s(" ");
 //			xlog(buf, 10);
 			// Execute USB command and return status to terminal
-			uint8_t r = exec_usb_cmd(&can_module, can_instance, buf, &CAN_flags, &CAN_init_val, cantask_id, &can_bitrate);
+			uint8_t r = exec_uart_cmd(&can_module, can_instance, buf, &CAN_flags, &CAN_init_val, cantask_id, &can_bitrate);
 //			xlog((uint8_t *) &r,1);
-			if (r != NO_RETURN) { // check if we have to send something back to the host.
+			if (r != NO_RETURN && r != ERROR_BUSY) { // check if we have to send something back to the host.
 				usb_putc(r, cantask_id);
 				usb_send(usart_instance, cantask_id);
 			}
 			// flush command buffer
-			clear_cmd_buf(usart_instance, cantask_id, buf_num);
+			if (r != ERROR_BUSY) {
+				clear_cmd_buf(usart_instance, cantask_id, buf_num);
+			}
 		}
 
 //		if (cantask_id) {
@@ -432,7 +435,7 @@ void vCanTask(void *pvParameters) {
 				}
 				 */
 				// send end tag
-				usb_putc(CR,cantask_id);
+				usb_putc(RETURN_CR,cantask_id);
 				usb_send(usart_instance, cantask_id);
 			}
 		}
@@ -462,10 +465,11 @@ void vCanTask(void *pvParameters) {
  * @param cantask_id
  * @return
  */
-uint8_t exec_usb_cmd(struct can_module *can_module, Can * can_instance, uint8_t *cmd_buf, uint16_t *CAN_flags, struct CAN_init_val_struct *CAN_init_val, uint8_t cantask_id, uint32_t *can_bitrate) {
+uart_command_return_t exec_uart_cmd(struct can_module *can_module, Can *can_instance, uint8_t *cmd_buf, uint16_t *CAN_flags, struct CAN_init_val_struct *CAN_init_val, uint8_t cantask_id, uint32_t *can_bitrate) {
 
 	struct CAN_tx_msg_struct CAN_tx_msg;	// CAN msg to send
 	struct can_tx_element tx_element;
+	uart_command_return_t return_code = NO_RETURN;
 
 	uint8_t cmd_len = (uint8_t) strlen((char *) cmd_buf);    // get command length
 	uint8_t *cmd_buf_pntr = cmd_buf;    // point to start of received string
@@ -476,13 +480,13 @@ uint8_t exec_usb_cmd(struct can_module *can_module, Can * can_instance, uint8_t 
 	// check if all chars are valid hex chars
 	//TODO possible endless loop!!
 	while (*cmd_buf_pntr) {
-		if(*cmd_buf_pntr == CR){
+		if(*cmd_buf_pntr == RETURN_CR){
 			*cmd_buf_pntr = 68;
 		}
 
 		if (!isxdigit(*cmd_buf_pntr)) {
 			c_log('x');
-			return ERROR;
+			return RETURN_ERROR;
 		}
 		++cmd_buf_pntr;
 	}
@@ -496,48 +500,28 @@ uint8_t exec_usb_cmd(struct can_module *can_module, Can * can_instance, uint8_t 
 //	c_log('|');
 
 	switch (*cmd_buf_pntr) {
-		// get serial number
+
+
 		case GET_SERIAL:
+			// get serial number
 			c_log('N');
-			usb_putc(GET_SERIAL,cantask_id);
-			usb_puts((uint8_t *) SERIAL,cantask_id);
-			return CR;
+			return_code = uart_command_get_serial(cantask_id);
+			break;
 
-			// get hard- and software version
 		case GET_VERSION:
+			// get hard- and software version
 //			c_log('V');
-			usb_putc(GET_VERSION,cantask_id);
-			usb_byte2ascii(HW_VER,cantask_id);
-			usb_byte2ascii(SW_VER,cantask_id);
-			return CR;
+			return_code = uart_command_get_version(cantask_id);
+			break;
 
-			// get only software version
 		case GET_SW_VERSION:
+			// get only software version
 			c_log('v');
-			usb_putc(GET_SW_VERSION,cantask_id);
-			usb_byte2ascii(SW_VER_MAJOR,cantask_id);
-			usb_byte2ascii(SW_VER_MINOR,cantask_id);
-			return CR;
-/*
- * TODO clarify if actually needed
-			// toggle time stamp option
-		case TIME_STAMP:
-			ulog_s("toggle time stamp option");
-			// read stored status
-			ram_timestamp_status = eeprom_read_byte(&ee_timestamp_status);
-			// toggle status
-			if (ram_timestamp_status != 0)
-				ram_timestamp_status = 0;    // disable time stamp
-			else {
-				ram_timestamp_status = 0xA5;    // enable time stamp
-				timestamp = 0;    // reset time stamp counter
-			}
-			// store new status
-			eeprom_write_byte(&ee_timestamp_status, ram_timestamp_status);
-			return CR;
-*/
-			// read status flag
+			return_code = uart_command_get_sw_version(cantask_id);
+			break;
+
 		case READ_STATUS:
+			// read status flag
 			c_log('F');
 
 			uint8_t flags = 0;
@@ -561,7 +545,7 @@ uint8_t exec_usb_cmd(struct can_module *can_module, Can * can_instance, uint8_t 
 
 			// reset error flags
 			reset_can_errorflags(CAN_flags);
-			return CR;
+			return RETURN_CR;
 
 			// set AMR
 		case SET_AMR:
@@ -572,12 +556,12 @@ uint8_t exec_usb_cmd(struct can_module *can_module, Can * can_instance, uint8_t 
 			// check valid cmd length and if CAN was initialized before
 			if (cmd_len != 9) {
 				c_log('e');
-				return ERROR;
+				return RETURN_ERROR;
 			}
 			// check if CAN controller is in reset mode
 			if (checkbit(CAN_flags, BUS_ON)) {
 				c_log('e');
-				return ERROR;
+				return RETURN_ERROR;
 			}
 
 			// assign pointer to AMR or ACR values depending on command
@@ -610,14 +594,14 @@ uint8_t exec_usb_cmd(struct can_module *can_module, Can * can_instance, uint8_t 
 			// check if CAN controller is in reset mode
 			if (checkbit(CAN_flags, BUS_ON)) {
 				c_log('e');
-				return ERROR;
+				return RETURN_ERROR;
 			}
 
 //			ulog_s("\r\ncmd_len: ");
 //			xlog(&cmd_len, 1);
 			if ((cmd_len != 5) && (cmd_len != 2)) {
 				c_log('e');
-				return ERROR;    // check valid cmd length
+				return RETURN_ERROR;    // check valid cmd length
 			}
 			uint8_t value = (uint8_t) (*(++cmd_buf_pntr) - 0x30);
 			// check if value is in bound of array
@@ -628,7 +612,7 @@ uint8_t exec_usb_cmd(struct can_module *can_module, Can * can_instance, uint8_t 
 //			value = 5;
 			if (value > 8) {
 				c_log('e');
-				return ERROR;
+				return RETURN_ERROR;
 			}
 
 			const uint32_t fixed_rate[] = {10000, 20000, 50000, 100000, 125000, 250000, 500000, 800000, 1000000};
@@ -636,7 +620,7 @@ uint8_t exec_usb_cmd(struct can_module *can_module, Can * can_instance, uint8_t 
 			*can_bitrate = fixed_rate[value];
 			setbit(CAN_flags, CAN_INIT); // indicate initialized controller
 
-			return CR;
+			return RETURN_CR;
 
 			// open CAN channel
 		case OPEN_CAN_CHAN:
@@ -644,31 +628,31 @@ uint8_t exec_usb_cmd(struct can_module *can_module, Can * can_instance, uint8_t 
 			// return error if controller is not initialized
 			if (!checkbit(CAN_flags, CAN_INIT)) {
 				c_log_s("e1");
-				return ERROR;
+				return RETURN_ERROR;
 			}
 
 			// check if CAN controller is in reset mode
 			if (checkbit(CAN_flags, BUS_ON)) {
 				c_log_s("e2");
-				return ERROR;
+				return RETURN_ERROR;
 			}
 
 //			can_start(can_module);
 			setup_can_instance(can_module, can_instance, *can_bitrate);
 			setbit(CAN_flags, BUS_ON);
-			return CR;
+			return RETURN_CR;
 
 			// close CAN channel
 		case CLOSE_CAN_CHAN:
 			c_log('C');
 			if (!checkbit(CAN_flags, BUS_ON)) {
 				c_log('e');
-				return ERROR;
+				return RETURN_ERROR;
 			}
 			can_stop(can_module);
 			clearbit(CAN_flags, BUS_ON);
 			clearbit(CAN_flags, CAN_INIT);
-			return CR;
+			return RETURN_CR;
 
 			// send R11bit ID message
 		case SEND_R11BIT_ID:
@@ -677,12 +661,12 @@ uint8_t exec_usb_cmd(struct can_module *can_module, Can * can_instance, uint8_t 
 			// check if CAN controller is in reset mode or busy
 			if (!checkbit(CAN_flags, BUS_ON) || checkbit(CAN_flags, TX_BUSY)) {
 //				c_log('e');
-				return ERROR;
+				return RETURN_ERROR;
 			}
 			// check valid cmd length (only 5 bytes for RTR)
 			if (cmd_len != 5) {
 //				c_log('e');
-				return ERROR;
+				return RETURN_ERROR;
 			}
 
 			can_get_tx_buffer_element_defaults(&tx_element);
@@ -712,14 +696,14 @@ uint8_t exec_usb_cmd(struct can_module *can_module, Can * can_instance, uint8_t 
 			setbit(CAN_flags,BUS_ON);
 			if (!checkbit(CAN_flags, BUS_ON) || checkbit(CAN_flags, TX_BUSY)) {
 				c_log_s("e1");
-				return ERROR;
+				return RETURN_ERROR;
 			}
 
 
 			if ((cmd_len < 5) || (cmd_len > 21)) {
 //				c_log_s("e2");
 //				xlog(&cmd_len,1);
-				return ERROR;    // check valid cmd length
+				return RETURN_ERROR;    // check valid cmd length
 			}
 
 			can_get_tx_buffer_element_defaults(&tx_element);
@@ -747,14 +731,14 @@ uint8_t exec_usb_cmd(struct can_module *can_module, Can * can_instance, uint8_t 
 			if (CAN_tx_msg.len != ((cmd_len - 5) / 2)) {
 //				c_log_s("e3");
 //				c_log(((cmd_len - 5) / 2)+ 0x30);
-				return ERROR;
+				return RETURN_ERROR;
 			}
 //			c_log(((cmd_len - 5) / 2)+ 0x30);
 
 			// check for valid length
 			if (CAN_tx_msg.len > 8) {
 //				c_log_s("e4");
-				return ERROR;
+				return RETURN_ERROR;
 			} else {        // store data
 				tx_element.T1.bit.DLC = CAN_tx_msg.len;
 				// cmd_len is no longer needed, so we can use it as counter here
@@ -778,12 +762,12 @@ uint8_t exec_usb_cmd(struct can_module *can_module, Can * can_instance, uint8_t 
 			// check if CAN controller is in reset mode or busy
 			if (!checkbit(CAN_flags, BUS_ON) || checkbit(CAN_flags, TX_BUSY)) {
 //				c_log('e');
-				return ERROR;
+				return RETURN_ERROR;
 			}
 
 			if (cmd_len != 10) {
 //				c_log('e');
-				return ERROR;    // check valid cmd length
+				return RETURN_ERROR;    // check valid cmd length
 			}
 
 			can_get_tx_buffer_element_defaults(&tx_element);
@@ -822,12 +806,12 @@ uint8_t exec_usb_cmd(struct can_module *can_module, Can * can_instance, uint8_t 
 			// check if CAN controller is in reset mode or busy
 			if (!checkbit(CAN_flags, BUS_ON) || checkbit(CAN_flags, TX_BUSY)) {
 				c_log_s("e1");
-				return ERROR;
+				return RETURN_ERROR;
 			}
 
 			if ((cmd_len < 10) || (cmd_len > 26)) {
 				c_log_s("e2");
-				return ERROR;    // check valid cmd length
+				return RETURN_ERROR;    // check valid cmd length
 			}
 			can_get_tx_buffer_element_defaults(&tx_element);
 
@@ -864,7 +848,7 @@ uint8_t exec_usb_cmd(struct can_module *can_module, Can * can_instance, uint8_t 
 				xlog(&cmd_len,1);
 
 //				c_log(((cmd_len - 10) / 2) + 0x30);
-				return ERROR;
+				return RETURN_ERROR;
 			}
 //			c_log('#');
 //			c_log(((cmd_len - 10) / 2) + 0x30);
@@ -872,7 +856,7 @@ uint8_t exec_usb_cmd(struct can_module *can_module, Can * can_instance, uint8_t 
 			// check for valid length
 			if (CAN_tx_msg.len > 8) {
 				c_log_s("e4");
-				return ERROR;
+				return RETURN_ERROR;
 			} else {        // store data
 				tx_element.T1.bit.DLC = CAN_tx_msg.len;
 				// cmd_len is no longer needed, so we can use it as counter here
@@ -900,7 +884,7 @@ uint8_t exec_usb_cmd(struct can_module *can_module, Can * can_instance, uint8_t 
 			// check if CAN controller is in reset mode
 			if (!checkbit(CAN_flags, BUS_ON)) {
 				c_log('e');
-				return ERROR;
+				return RETURN_ERROR;
 			}
 
 			if (*cmd_buf_pntr == READ_ECR) {
@@ -910,7 +894,7 @@ uint8_t exec_usb_cmd(struct can_module *can_module, Can * can_instance, uint8_t 
 				usb_putc(READ_ALCR,cantask_id);
 				usb_byte2ascii(last_alc,cantask_id);
 			}
-			return CR;
+			return RETURN_CR;
 
 		case LISTEN_ONLY:
 			c_log('L');
@@ -918,13 +902,13 @@ uint8_t exec_usb_cmd(struct can_module *can_module, Can * can_instance, uint8_t 
 			// return error if controller is not initialized or already open
 			if (!checkbit(CAN_flags, CAN_INIT)) {
 				c_log('e');
-				return ERROR;
+				return RETURN_ERROR;
 			}
 
 			// check if CAN controller is in reset mode
 			if (checkbit(CAN_flags, BUS_ON)) {
 				c_log('e');
-				return ERROR;
+				return RETURN_ERROR;
 			}
 
 			// switch to listen only mode
@@ -933,19 +917,16 @@ uint8_t exec_usb_cmd(struct can_module *can_module, Can * can_instance, uint8_t 
 				} while ((ModeControlReg & _BV(RM_RR_Bit)) == _BV(RM_RR_Bit));*/
 			setup_can_instance(can_module, can_instance, *can_bitrate);
 			setbit(CAN_flags, BUS_ON);
-			return CR;
+			return RETURN_CR;
 
 			// end with error on unknown commands
 		default:
 			c_log('u');
 			xlog(cmd_buf_pntr,1);
-			return ERROR;
-	}                // end switch
-
-	// we should never reach this return
-	c_log('X');
-	return ERROR;
-}                // end exec_usb_cmd
+			return RETURN_ERROR;
+	}
+	return return_code;
+}
 
 
 /*

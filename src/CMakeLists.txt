@@ -217,9 +217,11 @@ set(SOURCE_FILES
 		tasks/stack_task.h
 		tasks/can_task.c
 		tasks/can_task.h
+		tasks/uart_commands.c
+		tasks/uart_commands.h
 		canbus/usb.h
 		canbus/usb.c
-		)
+		tasks/slcan.h)
 
 
 
