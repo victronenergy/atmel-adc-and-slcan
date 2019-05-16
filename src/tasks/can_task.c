@@ -370,12 +370,12 @@ void vCanTask(void *pvParameters) {
 				usb_send(usart_instance, cantask_id);
 			}
 			// flush command buffer
-			clear_cmd_buf(cantask_id, buf_num);
+			clear_cmd_buf(usart_instance, cantask_id, buf_num);
 		}
 
 //		if (cantask_id) {
 			port_pin_set_output_level(PIN_PA15, false);
-			port_pin_set_output_level(PIN_PA14, true);
+//			port_pin_set_output_level(PIN_PA14, true);
 //		} else {
 //			port_pin_set_output_level(PIN_PA24, false);
 //			port_pin_set_output_level(PIN_PA25, true);
@@ -437,7 +437,7 @@ void vCanTask(void *pvParameters) {
 			}
 		}
 //		if (cantask_id)
-			port_pin_set_output_level(PIN_PA14, false);
+//			port_pin_set_output_level(PIN_PA14, false);
 //		else
 //			port_pin_set_output_level(PIN_PA25, false);
 		flush_clog();

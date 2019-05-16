@@ -42,7 +42,10 @@ typedef struct {
 	int8_t tx_insert_pos;
 	int8_t buf_tx_len[USB_CMD_BUF_COUNT];
 	int8_t rx_insert_pos;
-	bool buf_overrun;
+	uint8_t rx_fill_level;
+	uint8_t tx_fill_level;
+	bool rx_buf_overrun;
+	bool tx_buf_overrun;
 } usart_buf_t;
 
 typedef enum {
@@ -54,14 +57,14 @@ typedef enum {
 
 
 bool usb_putc(uint8_t tx_byte, uint8_t cantask_id);
-void usb_puts(uint8_t * tx_string, uint8_t cantask_id);
+bool usb_puts(uint8_t * tx_string, uint8_t cantask_id);
 enum status_code usb_send(usart_module_t *module, uint8_t cantask_id);
 
-void usb_byte2ascii (uint8_t tx_byte, uint8_t cantask_id);
+bool usb_byte2ascii (uint8_t tx_byte, uint8_t cantask_id);
 uint8_t ascii2byte (const uint8_t *val);
 
 enum_usb_return_t get_complete_cmd(uint8_t **cmd_buf, uint32_t *buf_num, uint8_t cantask_id);
-bool clear_cmd_buf(uint8_t cantask_id, uint32_t buf_num);
+bool clear_cmd_buf(usart_module_t *usart_module, uint8_t cantask_id, uint32_t buf_num);
 
 void configure_usart_callbacks(usart_module_t *usart_instance, uint8_t cantask_id);
 bool start_canbus_usart(usart_module_t *usart_instance, usart_buf_t *buf_struct, uint8_t cantask_id);

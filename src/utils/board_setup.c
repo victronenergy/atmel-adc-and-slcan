@@ -34,9 +34,18 @@ void board_init(void) {
 	port_get_config_defaults(&debug_port);
 
 	debug_port.direction  = PORT_PIN_DIR_OUTPUT;
-//	task0
+
+
+	//debug pins
 	port_pin_set_config(PIN_PA15, &debug_port);
 	port_pin_set_config(PIN_PA14, &debug_port);
+	port_pin_set_config(PIN_PA19, &debug_port);
+	port_pin_set_config(PIN_PA20, &debug_port);
+
+	port_pin_set_output_level(PIN_PA15, false);
+	port_pin_set_output_level(PIN_PA14, false);
+	port_pin_set_output_level(PIN_PA19, false);
+	port_pin_set_output_level(PIN_PA20, true);
 
 
 	/* Set up the CAN TX/RX pins */

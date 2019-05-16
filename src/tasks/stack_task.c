@@ -60,7 +60,7 @@ void vStackTask(void *pvParameters) {
 			test_mark( &freemem[i], &(*(task_handles[i])), override);
 		}
 		test_mark( &freemem[num_handles+1], &s, override);
-		vTaskDelay((const TickType_t) 1000);
+		vTaskDelay((const TickType_t) 2000);
 
 	}
 }

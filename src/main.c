@@ -9,10 +9,6 @@
 #include "can.h"
 
 
-//TODO set correct value
-#define CAN_TX_BUFFER_INDEX 0
-
-
 int main(void) {
 	system_init();
 	delay_init();
