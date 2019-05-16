@@ -72,10 +72,4 @@ TaskHandle_t vCreateCanTask(cantask_params *params);
 // calculate timer0 overflow value
 #define OCR_VALUE ((unsigned char)((unsigned long)(TIME_STAMP_TICK) / (1000000L / (float)((unsigned long)F_CPU / 64L))))
 
-
-//extern volatile uint16_t CAN_flags;
-extern volatile uint8_t last_ecr;
-extern volatile uint8_t last_alc;
-
-
 #endif //SAMC_FREERTOS_CAN_TASK_H

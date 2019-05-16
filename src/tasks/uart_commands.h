@@ -20,12 +20,26 @@ typedef enum {
 	ERROR_BUSY = 128
 } uart_command_return_t;
 
+typedef struct {
+	uint16_t init_complete:1;
+	uint16_t bus_on:1;
+	uint16_t tx_busy:1;
+} can_flags_t;
 
-
-
+// can control/setting commands
 uart_command_return_t uart_command_get_serial(uint8_t cantask_id);
 uart_command_return_t uart_command_get_version(uint8_t cantask_id);
 uart_command_return_t uart_command_get_sw_version(uint8_t cantask_id);
+uart_command_return_t uart_command_read_status(struct can_module *can_module, uint8_t cantask_id, can_flags_t *can_flags);
+uart_command_return_t uart_command_set_bitrate(uint8_t cmd_len, uint8_t *cmd_buf_pntr, uint32_t *can_bitrate, can_flags_t *can_flags);
+uart_command_return_t uart_command_open_can_channel(struct can_module *can_module, Can *can_instance, uint32_t *can_bitrate, can_flags_t *can_flags);
+uart_command_return_t uart_command_close_can_channel(struct can_module *can_module, can_flags_t *can_flags);
+uart_command_return_t uart_command_listen_only_mode(struct can_module *can_module, Can *can_instance, uint32_t *can_bitrate, can_flags_t *can_flags);
 
+//can message commands
+uart_command_return_t uart_command_send_r11bit_id(struct can_module *can_module, uint8_t cmd_len, uint8_t *cmd_buf_pntr, can_flags_t *can_flags);
+uart_command_return_t uart_command_send_11bit_id(struct can_module *can_module, uint8_t cmd_len, uint8_t *cmd_buf_pntr, can_flags_t *can_flags);
+uart_command_return_t uart_command_send_r29bit_id(struct can_module *can_module, uint8_t cmd_len, uint8_t *cmd_buf_pntr, can_flags_t *can_flags);
+uart_command_return_t uart_command_send_29bit_id(struct can_module *can_module, uint8_t cmd_len, uint8_t *cmd_buf_pntr, can_flags_t *can_flags);
 
 #endif //SAMC_FREERTOS_UART_COMMANDS_H
