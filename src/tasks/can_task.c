@@ -357,6 +357,52 @@ uart_command_return_t exec_uart_cmd(struct can_module *can_module, Can *can_inst
 			return_code = uart_command_read_status(can_module, cantask_id, can_flags);
 			break;
 
+		case SET_BITRATE:
+			// set fix bitrate
+			c_log('S');
+			return_code = uart_command_set_bitrate(cmd_len, cmd_buf_pntr, can_bitrate, can_flags);
+			break;
+
+		case OPEN_CAN_CHAN:
+			// open CAN channel
+			c_log('O');
+			return_code = uart_command_open_can_channel(can_module, can_instance, can_bitrate, can_flags);
+			break;
+
+		case CLOSE_CAN_CHAN:
+			// close CAN channel
+			c_log('C');
+			return_code = uart_command_close_can_channel(can_module, can_flags);
+			break;
+
+		case LISTEN_ONLY:
+			c_log('L');
+			return_code = uart_command_listen_only_mode(can_module, can_instance, can_bitrate, can_flags);
+			break;
+
+		case SEND_R11BIT_ID:
+			// send R11bit ID message
+			c_log('r');
+			return_code = uart_command_send_r11bit_id(can_module, cmd_len, cmd_buf_pntr, can_flags);
+			break;
+
+		case SEND_11BIT_ID:
+			// send 11bit ID message
+			c_log('t');
+			return_code = uart_command_send_11bit_id(can_module, cmd_len, cmd_buf_pntr, can_flags);
+			break;
+
+		case SEND_R29BIT_ID:
+			// send R29bit ID message
+			c_log('R');
+			return_code = uart_command_send_r29bit_id(can_module, cmd_len, cmd_buf_pntr, can_flags);
+			break;
+
+		case SEND_29BIT_ID:
+			// send 29bit ID message
+			c_log('T');
+			return_code = uart_command_send_29bit_id(can_module, cmd_len, cmd_buf_pntr, can_flags);
+			break;
 
 /*		case SET_AMR:
 			// set AMR
@@ -398,52 +444,8 @@ uart_command_return_t exec_uart_cmd(struct can_module *can_module, Can *can_inst
 			*tmp_pntr |= ascii2byte(++cmd_buf_pntr);
 			// init CAN controller with new values
 			return reset_can_errorflags(CAN_flags);
-*/
 
-		case SET_BITRATE:
-			// set fix bitrate
-			c_log('S');
-			return_code = uart_command_set_bitrate(cmd_len, cmd_buf_pntr, can_bitrate, can_flags);
-			break;
-
-		case OPEN_CAN_CHAN:
-			// open CAN channel
-			c_log('O');
-			return_code = uart_command_open_can_channel(can_module, can_instance, can_bitrate, can_flags);
-			break;
-
-		case CLOSE_CAN_CHAN:
-			// close CAN channel
-			c_log('C');
-			return_code = uart_command_close_can_channel(can_module, can_flags);
-			break;
-
-		case SEND_R11BIT_ID:
-			// send R11bit ID message
-			c_log('r');
-			return_code = uart_command_send_r11bit_id(can_module, cmd_len, cmd_buf_pntr, can_flags);
-			break;
-
-		case SEND_11BIT_ID:
-			// send 11bit ID message
-			c_log('t');
-			return_code = uart_command_send_11bit_id(can_module, cmd_len, cmd_buf_pntr, can_flags);
-			break;
-
-
-		case SEND_R29BIT_ID:
-			// send R29bit ID message
-			c_log('R');
-			return_code = uart_command_send_r29bit_id(can_module, cmd_len, cmd_buf_pntr, can_flags);
-			break;
-
-		case SEND_29BIT_ID:
-			// send 29bit ID message
-			c_log('T');
-			return_code = uart_command_send_29bit_id(can_module, cmd_len, cmd_buf_pntr, can_flags);
-			break;
-
-/*		case READ_ECR:
+		case READ_ECR:
 			// read Error Capture Register
 			c_log('E');
 
@@ -452,7 +454,7 @@ uart_command_return_t exec_uart_cmd(struct can_module *can_module, Can *can_inst
 			c_log('A');
 //			ulog_s("read ECR/ALCR");
 			// check if CAN controller is in reset mode
-			if (!checkbit(can_flags, BUS_ON)) {
+			if (!can_flags->bus_on)) {
 				c_log('e');
 				return RETURN_ERROR;
 			}
@@ -466,10 +468,6 @@ uart_command_return_t exec_uart_cmd(struct can_module *can_module, Can *can_inst
 			}
 			return RETURN_CR;
 */
-		case LISTEN_ONLY:
-			c_log('L');
-			return_code = uart_command_listen_only_mode(can_module, can_instance, can_bitrate, can_flags);
-			break;
 
 		default:
 			// end with error on unknown commands
@@ -479,17 +477,6 @@ uart_command_return_t exec_uart_cmd(struct can_module *can_module, Can *can_inst
 	}
 	return return_code;
 }
-
-
-/*
-void init_can_mem() {
-	// Initialize the memory.
-	for (uint32_t i = 0; i < CONF_CAN_ELEMENT_DATA_SIZE; i++) {
-		tx_message_0[i] = (uint8_t) i;
-		tx_message_1[i] = (uint8_t) (i + 0x80);
-	}
-}
-*/
 
 TaskHandle_t vCreateCanTask(cantask_params *params) {
 

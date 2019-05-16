@@ -39,7 +39,7 @@ void setup_can_instance(struct can_module *can_module, Can *can_hw, uint32_t bit
 	config_can.run_in_standby = true;
 
 	// make sure that the hw is off.
-	can_stop(can_module);
+//	can_stop(can_module);
 
 	//setup the hw
 	can_init(can_module, can_hw, &config_can);
