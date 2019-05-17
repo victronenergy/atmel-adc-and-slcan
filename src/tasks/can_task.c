@@ -382,25 +382,25 @@ uart_command_return_t exec_uart_cmd(struct can_module *can_module, Can *can_inst
 
 		case SEND_R11BIT_ID:
 			// send R11bit ID message
-			c_log('r');
+//			c_log('r');
 			return_code = uart_command_send_r11bit_id(can_module, cmd_len, cmd_buf_pntr, can_flags);
 			break;
 
 		case SEND_11BIT_ID:
 			// send 11bit ID message
-			c_log('t');
+//			c_log('t');
 			return_code = uart_command_send_11bit_id(can_module, cmd_len, cmd_buf_pntr, can_flags);
 			break;
 
 		case SEND_R29BIT_ID:
 			// send R29bit ID message
-			c_log('R');
+//			c_log('R');
 			return_code = uart_command_send_r29bit_id(can_module, cmd_len, cmd_buf_pntr, can_flags);
 			break;
 
 		case SEND_29BIT_ID:
 			// send 29bit ID message
-			c_log('T');
+//			c_log('T');
 			return_code = uart_command_send_29bit_id(can_module, cmd_len, cmd_buf_pntr, can_flags);
 			break;
 

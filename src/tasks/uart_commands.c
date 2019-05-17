@@ -44,9 +44,27 @@ void setup_can_instance(struct can_module *can_module, Can *can_hw, uint32_t bit
 	//setup the hw
 	can_init(can_module, can_hw, &config_can);
 
-	// change bitrate
-//	can_set_baudrate(can_hw, bitrate);
+/*	ulog_s("\r\nNBTP reg: ");
+	xlog_long((const uint32_t *) &can_hw->NBTP.reg);
 
+
+	ulog_s("\r\nGCLK reg: ");
+	xlog_long((const uint32_t *) &GCLK->GENCTRL[8].reg);
+*/
+	// change bitrate
+	can_set_baudrate(can_hw, bitrate);
+/*
+	ulog_s("\r\nGCLK reg: ");
+	xlog_long((const uint32_t *) &GCLK->GENCTRL[8].reg);
+
+	uint32_t tmp = system_gclk_chan_get_hz(CAN0_GCLK_ID);
+
+	ulog_s("\r\nclk spd : ");
+	xlog_long((const uint32_t *) &tmp);
+	ulog_s("\r\nNBTP reg: ");
+	xlog_long((const uint32_t *) &can_hw->NBTP.reg);
+
+*/
 	// start hw
 	can_start(can_module);
 }
@@ -69,8 +87,8 @@ uint8_t transmit_CAN(struct can_module *const can_module, struct can_tx_element 
 		}
 		return NO_RETURN;
 	} else {
-		c_log_s("E3");
-		return RETURN_ERROR;
+//		c_log_s("E3");
+		return ERROR_BUSY;
 	}
 
 }
