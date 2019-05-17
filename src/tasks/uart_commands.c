@@ -129,17 +129,19 @@ uart_command_return_t uart_command_get_sw_version(uint8_t cantask_id) {
 
 uart_command_return_t uart_command_read_status(struct can_module *can_module, uint8_t cantask_id, can_flags_t *can_flags) {
 	uint8_t flags = 0;
-	uint32_t status = can_read_protocal_status(can_module);
-	flags |= (status & CAN_PSR_EW) ? (1 << 2) : 0;
-	flags |= (status & CAN_PSR_EP) ? (1 << 5) : 0;
-	flags |= (can_module->hw->RXF0S.bit.RF0L || can_module->hw->RXF1S.bit.RF1L) ? (1 << 3) : 0;
-//			flags |= (status & CAN_PSR_LEC_Msk) ? (1 << 7) : 0;
-	if ((status & CAN_PSR_LEC_Msk) && (status & CAN_PSR_LEC_Msk) != 0x7) {
-		flags |= (1 << 7);
-	}
+	// if the bus is not on, the HW is not available and a read from HW resouces will lead to an infinit wait here!
+	// so we return 0 if we read before bus-on.
+	if (can_flags->bus_on) {
+		uint32_t status = can_read_protocal_status(can_module);
 
-	usb_putc(READ_STATUS,cantask_id);
-	usb_byte2ascii((uint8_t) flags,cantask_id);
+		flags |= (status & CAN_PSR_EW) ? (1 << 2) : 0;
+		flags |= (status & CAN_PSR_EP) ? (1 << 5) : 0;
+		flags |= (can_module->hw->RXF0S.bit.RF0L || can_module->hw->RXF1S.bit.RF1L) ? (1 << 3) : 0;
+//		flags |= (status & CAN_PSR_LEC_Msk) ? (1 << 7) : 0;
+		if((status & CAN_PSR_LEC_Msk) && (status & CAN_PSR_LEC_Msk) != 0x7) {
+			flags |= (1 << 7);
+		}
+	}
 
 	// reset error flags
 	reset_can_errorflags(can_flags);
