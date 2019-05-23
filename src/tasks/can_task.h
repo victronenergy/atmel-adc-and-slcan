@@ -2,11 +2,11 @@
 // Created by stekreis on 25.05.18.
 //
 
+#ifndef SAMC_FREERTOS_CAN_TASK_H
+#define SAMC_FREERTOS_CAN_TASK_H
 #include "conf_can.h"
 #include "can.h"
 #include "log.h"
-#ifndef SAMC_FREERTOS_CAN_TASK_H
-#define SAMC_FREERTOS_CAN_TASK_H
 
 typedef struct {
 	uint8_t task_id;

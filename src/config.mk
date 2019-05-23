@@ -57,6 +57,7 @@ CSRCS = ${LIB_CSRCS}\
 		main.c \
 		tasks/stack_task.c	\
 		tasks/can_task.c	\
+		tasks/adc_task.c \
 		tasks/uart_commands.c \
 		utils/board_setup.c \
 		utils/comm_interface_setup.c \
@@ -128,6 +129,7 @@ CPPFLAGS = \
        -D CUSTOM_BOARD=CERBO_SLCAN_ADC	\
        -D __SAMC21G18A__				\
        -D USART_CALLBACK_MODE=true		\
+       -D ADC_CALLBACK_MODE=true		\
        -D __FREERTOS__	\
 		-D SYSTICK_MODE	\
 		-D NDEBUG		\

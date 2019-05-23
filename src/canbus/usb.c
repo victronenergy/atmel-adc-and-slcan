@@ -82,8 +82,8 @@ inline static void write_byte_to_wire(uint8_t byte, uint8_t pin) {
 }
 
 inline static void usart_read_callback(struct usart_module *const usart_module, uint8_t cantask_id) {
-	port_pin_set_output_level(PIN_PA19, true);
-	port_pin_set_output_level(PIN_PA20, false);
+//	port_pin_set_output_level(PIN_PA19, true);
+//	port_pin_set_output_level(PIN_PA20, false);
 	volatile usart_buf_t *buf;
 	if (cantask_id == CANTASK_ID_0) {
 		buf = usart_buf_can0;
@@ -107,7 +107,7 @@ inline static void usart_read_callback(struct usart_module *const usart_module, 
 			//if this happens the commands are not processed fast enough and to prevent overwriting the last stored
 			//command we are now disabling receiving!
 			buf->rx_buf_overrun = true;
-			port_pin_set_output_level(PIN_PA14, true);
+//			port_pin_set_output_level(PIN_PA14, true);
 		}
 		buf->fill_rx = (uint8_t) ((buf->fill_rx + 1) % USB_CMD_BUF_COUNT);
 		buf->rx_insert_pos = -1;
@@ -115,10 +115,10 @@ inline static void usart_read_callback(struct usart_module *const usart_module, 
 	}
 	buf->rx_insert_pos = (uint8_t) ((buf->rx_insert_pos + 1) % USB_CMD_BUF_SIZE);
 	if (!buf->rx_buf_overrun) {
-		port_pin_set_output_level(PIN_PA20, true);
+//		port_pin_set_output_level(PIN_PA20, true);
 		usart_read_job(usart_module, (uint16_t *) &(buf->usart_buf_rx[buf->fill_rx][buf->rx_insert_pos]));
 	}
-	port_pin_set_output_level(PIN_PA19, false);
+//	port_pin_set_output_level(PIN_PA19, false);
 }
 
 void usart_read_callback_cantask0(struct usart_module *const usart_module) {
@@ -284,14 +284,14 @@ bool clear_cmd_buf(usart_module_t *usart_module, uint8_t cantask_id, uint32_t bu
 //			memset(buf->usart_buf_rx[i], 0x00, USB_CMD_BUF_SIZE);
 //		}
 		if (buf->rx_buf_overrun) {
-			port_pin_set_output_level(PIN_PA14, false);
+//			port_pin_set_output_level(PIN_PA14, false);
 //			ulog_s(" ovr ");
 			/*
 			 * if we had an possible overflow in the next rx buffer row, the uart read callback
 			 * has not started a new reading. But we now have cleared one buffer entry so a new
 			 * reading from uart can be started!
 			*/
-			port_pin_set_output_level(PIN_PA20, true);
+//			port_pin_set_output_level(PIN_PA20, true);
 			if(usart_read_job(usart_module, (uint16_t *) &(buf->usart_buf_rx[buf->fill_rx][buf->rx_insert_pos])) != STATUS_OK) {
 				ulog_s("\r\nrestart after buf_overrun failed!");
 			}

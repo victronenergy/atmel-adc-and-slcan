@@ -13,9 +13,16 @@ set(SOURCE_FILES
 		lib/ASF/common2/services/delay/sam0/systick_counter.c
 		lib/ASF/common2/services/delay/sam0/systick_counter.h
 		lib/ASF/common2/services/delay/delay.h
+		lib/ASF/sam0/drivers/adc/adc.h
+		lib/ASF/sam0/drivers/adc/adc_callback.h
+		lib/ASF/sam0/drivers/adc/adc_sam_l_c/adc_feature.h
+		lib/ASF/sam0/drivers/adc/adc_sam_l_c/adc.c
+		lib/ASF/sam0/drivers/adc/adc_sam_l_c/adc_callback.c
 		lib/ASF/sam0/drivers/can/can.h
 		lib/ASF/sam0/drivers/can/can.c
-		lib/ASF/sam0/drivers/can/module_config/conf_can.h
+		lib/ASF/sam0/drivers/dma/dma.h
+		lib/ASF/sam0/drivers/dma/dma_crc.h
+		lib/ASF/sam0/drivers/dma/dma.c
 		lib/ASF/sam0/drivers/nvm/nvm.c
 		lib/ASF/sam0/drivers/port/quick_start/qs_port_basic.h
 		lib/ASF/sam0/drivers/port/port.c
@@ -145,8 +152,6 @@ set(SOURCE_FILES
 		lib/ASF/sam0/utils/status_codes.h
 		lib/ASF/thirdparty/CMSIS/Include/arm_math.h
 		lib/ASF/thirdparty/CMSIS/Include/core_cm0plus.h
-		lib/ASF/thirdparty/CMSIS/Include/core_cmFunc.h
-		lib/ASF/thirdparty/CMSIS/Include/core_cmInstr.h
 		lib/ASF/thirdparty/freertos/freertos-10.0.0/Source/include/croutine.h
 		lib/ASF/thirdparty/freertos/freertos-10.0.0/Source/include/deprecated_definitions.h
 		lib/ASF/thirdparty/freertos/freertos-10.0.0/Source/include/event_groups.h
@@ -204,6 +209,7 @@ set(SOURCE_FILES
 		config/asf.h
 		config/conf_clocks.h
 		config/conf_can.h
+		config/conf_dma.h
 		config/FreeRTOSConfig.h
 		config/custom_board_template.h
 		config/custom_board.h
@@ -219,9 +225,11 @@ set(SOURCE_FILES
 		tasks/can_task.h
 		tasks/uart_commands.c
 		tasks/uart_commands.h
+		tasks/slcan.h
+		tasks/adc_task.c
+		tasks/adc_task.h
 		canbus/usb.h
-		canbus/usb.c
-		tasks/slcan.h)
+		canbus/usb.c)
 
 
 
@@ -229,7 +237,9 @@ include_directories(lib/ASF/common/boards)
 include_directories(lib/ASF/common/utils)
 include_directories(lib/ASF/common2/services/delay)
 include_directories(lib/ASF/sam0/boards)
+include_directories(lib/ASF/sam0/drivers/adc)
 include_directories(lib/ASF/sam0/drivers/can)
+include_directories(lib/ASF/sam0/drivers/dma)
 include_directories(lib/ASF/sam0/drivers/can/module_config)
 include_directories(lib/ASF/sam0/drivers/port)
 include_directories(lib/ASF/sam0/drivers/sercom)
@@ -273,6 +283,7 @@ add_definitions(-D BOARD=USER_BOARD)
 add_definitions(-D CUSTOM_BOARD=PENTA_SLCAN_ADC)
 add_definitions(-D __SAMC21G18A__)
 add_definitions(-D USART_CALLBACK_MODE=true)
+add_definitions(-D ADC_CALLBACK_MODE=true)
 add_definitions(-D __FREERTOS__)
 add_definitions(-D SYSTICK_MODE)
 add_definitions(-D NDEBUG)

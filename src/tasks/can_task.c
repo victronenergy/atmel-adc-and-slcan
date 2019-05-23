@@ -4,7 +4,6 @@
 
 #include <log.h>
 #include "can_task.h"
-#include "usb.h"
 #include <ctype.h>
 #include <usb.h>
 #include <cmsis/samc21/include/component/can.h>
@@ -186,7 +185,7 @@ void vCanTask(void *pvParameters) {
 
 
 //		if (cantask_id)
-			port_pin_set_output_level(PIN_PA15, true);
+//			port_pin_set_output_level(PIN_PA15, true);
 //		else
 //			port_pin_set_output_level(PIN_PA24, true);
 
@@ -215,7 +214,7 @@ void vCanTask(void *pvParameters) {
 		}
 
 //		if (cantask_id) {
-			port_pin_set_output_level(PIN_PA15, false);
+//			port_pin_set_output_level(PIN_PA15, false);
 //			port_pin_set_output_level(PIN_PA14, true);
 //		} else {
 //			port_pin_set_output_level(PIN_PA24, false);
@@ -497,7 +496,7 @@ TaskHandle_t vCreateCanTask(cantask_params *params) {
 			task_name,          /* Text name for the task. */
 			350,      /* Stack size in words, not bytes. */
 			params,    /* Parameter passed into the task. */
-			tskIDLE_PRIORITY + 5,/* Priority at which the task is created. */
+			tskIDLE_PRIORITY,/* Priority at which the task is created. */
 			&xHandle);      /* Used to pass out the created task's handle. */
 
 	if (xReturned == pdPASS) {
