@@ -45,7 +45,7 @@ void board_init(void) {
 	port_pin_set_output_level(PIN_PA15, false);
 	port_pin_set_output_level(PIN_PA14, false);
 	port_pin_set_output_level(PIN_PA19, false);
-	port_pin_set_output_level(PIN_PA20, true);
+	port_pin_set_output_level(PIN_PA20, false);
 
 
 	/* Set up the CAN TX/RX pins */

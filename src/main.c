@@ -8,6 +8,7 @@
 #include "conf_can.h"
 #include "can_task.h"
 #include "can.h"
+#include <component/rstc.h>
 
 
 int main(void) {
@@ -26,6 +27,18 @@ int main(void) {
 	adc_module_t adc_instance1;
 	dma_resource_t dma_resource0;
 	dma_resource_t dma_resource1;
+	i2c_module_t i2c_slave_instance;
+
+	/*
+	 * make sure the software device instance structs are 0x00 on all fields!
+	 */
+	memset(&debug_ulog, 0x00, sizeof(usart_module_t));
+	memset(&uartcan_instance, 0x00, sizeof(usart_module_t));
+	memset(&adc_instance0, 0x00, sizeof(adc_module_t));
+	memset(&adc_instance1, 0x00, sizeof(adc_module_t));
+	memset(&dma_resource0, 0x00, sizeof(dma_resource_t));
+	memset(&dma_resource1, 0x00, sizeof(dma_resource_t));
+	memset(&i2c_slave_instance, 0x00, sizeof(i2c_module_t));
 
 	/*
 	 * Add Methods here that need to run before interrupts are enabled!
@@ -44,6 +57,7 @@ int main(void) {
 	adc_params.adc_instance1 = &adc_instance1;
 	adc_params.dma_resource0 = &dma_resource0;
 	adc_params.dma_resource1 = &dma_resource1;
+	adc_params.i2c_instance = &i2c_slave_instance;
 
 	/*
 	 * Global Interrupts Enable!
@@ -56,6 +70,70 @@ int main(void) {
 	 */
 
 	configure_ulog(&debug_ulog);
+	ulog_s("\r\n");
+
+	/*
+	 * check fuses, write if not 'correct'
+	 */
+	{
+		struct nvm_fusebits fuses;
+		nvm_get_fuses(&fuses);
+		if(fuses.bodvdd_enable != true) {
+			ulog_s("update fuses");
+			fuses.bodvdd_enable = true;
+			fuses.bodvdd_action = NVM_BOD33_ACTION_RESET;
+			fuses.bodvdd_hysteresis = true;
+			fuses.bodvdd_level = 8;
+			if (nvm_set_fuses(&fuses) != STATUS_OK) {
+				ulog_s(" failed\r\n");
+			} else {
+				ulog_s(" ok\r\n");
+			}
+		}
+	}
+	/**
+	0  Power On Reset
+	1  Brown Out CORE Detector Reset
+	2  Brown Out VDD Detector Reset
+	3  Reserved
+	4  External Reset
+	5  Watchdog Reset
+	6  System Reset Request
+	7  Reserved
+	 */
+	ulog_s("Reset info: 0x");
+	enum system_reset_cause cause = system_get_reset_cause();
+	xlog((uint8_t *) &cause, 1);
+	ulog_s(" - ");
+	switch(cause) {
+		case SYSTEM_RESET_CAUSE_POR:
+			ulog_s("Power On Reset");
+			break;
+		case SYSTEM_RESET_CAUSE_BODCORE:
+			ulog_s("Brown Out CORE Detector Reset");
+			break;
+		case SYSTEM_RESET_CAUSE_BODVDD:
+			ulog_s("Brown Out VDD Detector Reset");
+			break;
+		case SYSTEM_RESET_CAUSE_EXTERNAL_RESET:
+			ulog_s("External Reset");
+			break;
+		case SYSTEM_RESET_CAUSE_WDT:
+			ulog_s("Watchdog Reset");
+			break;
+		case SYSTEM_RESET_CAUSE_SOFTWARE:
+			ulog_s("System Reset Request");
+			break;
+		default:
+			ulog_s("Other Reset");
+			break;
+	}
+	ulog_s("\r\n");
+
+	if (cause == SYSTEM_RESET_CAUSE_POR) {
+		delay_s(1);
+		system_reset();
+	}
 
 	ulog_s("prepare Tasks\r\n");
 	TaskHandle_t task_handles[2];

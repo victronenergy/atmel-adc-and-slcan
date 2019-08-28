@@ -91,6 +91,14 @@ void system_board_init(void);
 /** @} */
 
 
+/* slave sercom pinmux setting */
+#define ADC_I2C_SLAVE_MODULE			SERCOM0
+#define ADC_I2C_SLAVE_SDA_PINMUX		PINMUX_PA08C_SERCOM0_PAD0
+#define ADC_I2C_SLAVE_SCK_PINMUX		PINMUX_PA09C_SERCOM0_PAD1
+#define ADC_I2C_SLAVE_DMA_RX_TRIGGER	SERCOM0_DMAC_ID_RX
+#define ADC_I2C_SLAVE_DMA_TX_TRIGGER	SERCOM0_DMAC_ID_TX
+
+
 /**
  * \brief Turns off the specified LEDs.
  *

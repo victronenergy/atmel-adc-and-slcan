@@ -116,4 +116,11 @@
 #include <tc.h>
 #include <tc_interrupt.h>
 
+// From module: NVM - Non-Volatile Memory Driver
+#include <nvm.h>
+
+// FROM module: WDT - Watchdog Driver
+#include <wdt.h>
+#include <wdt_callback.h>
+
 #endif // ASF_H

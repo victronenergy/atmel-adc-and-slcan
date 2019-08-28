@@ -7,6 +7,8 @@
 #include "asf.h"
 #include "adc_sam_l_c/adc_feature.h"
 #include "dma.h"
+#include "i2c_slave.h"
+#include "i2c_vitual_eeprom.h"
 
 typedef struct adc_module adc_module_t;
 typedef struct dma_resource dma_resource_t;
@@ -14,6 +16,7 @@ typedef struct dma_resource dma_resource_t;
 typedef struct {
 	adc_module_t *adc_instance0;
 	adc_module_t *adc_instance1;
+	i2c_module_t *i2c_instance;
 	dma_resource_t *dma_resource0;
 	dma_resource_t *dma_resource1;
 } adctask_params;

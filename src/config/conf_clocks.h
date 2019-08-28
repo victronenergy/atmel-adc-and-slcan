@@ -126,24 +126,24 @@
 #  define CONF_CLOCK_GCLK_0_OUTPUT_ENABLE         false
 
 /* Configure GCLK generator 1 */
-#  define CONF_CLOCK_GCLK_1_ENABLE                true
+#  define CONF_CLOCK_GCLK_1_ENABLE                true							// SLCAN-UART
 #  define CONF_CLOCK_GCLK_1_RUN_IN_STANDBY        true
 #  define CONF_CLOCK_GCLK_1_CLOCK_SOURCE          SYSTEM_CLOCK_SOURCE_OSC48M
 #  define CONF_CLOCK_GCLK_1_PRESCALER             2								// this will generate 24MHz clock
 #  define CONF_CLOCK_GCLK_1_OUTPUT_ENABLE         false
 
 /* Configure GCLK generator 2  */
-#  define CONF_CLOCK_GCLK_2_ENABLE                true
+#  define CONF_CLOCK_GCLK_2_ENABLE                true							// ADC
 #  define CONF_CLOCK_GCLK_2_RUN_IN_STANDBY        true
 #  define CONF_CLOCK_GCLK_2_CLOCK_SOURCE          SYSTEM_CLOCK_SOURCE_OSC48M
 #  define CONF_CLOCK_GCLK_2_PRESCALER             3								// this will generate 16MHz clock
 #  define CONF_CLOCK_GCLK_2_OUTPUT_ENABLE         false
 
 /* Configure GCLK generator 3 */
-#  define CONF_CLOCK_GCLK_3_ENABLE                false
-#  define CONF_CLOCK_GCLK_3_RUN_IN_STANDBY        false
+#  define CONF_CLOCK_GCLK_3_ENABLE                true							//ADC-I2C
+#  define CONF_CLOCK_GCLK_3_RUN_IN_STANDBY        true
 #  define CONF_CLOCK_GCLK_3_CLOCK_SOURCE          SYSTEM_CLOCK_SOURCE_OSC48M
-#  define CONF_CLOCK_GCLK_3_PRESCALER             1
+#  define CONF_CLOCK_GCLK_3_PRESCALER             4								// this will generate 12MHz clock
 #  define CONF_CLOCK_GCLK_3_OUTPUT_ENABLE         false
 
 /* Configure GCLK generator 4 */
@@ -175,7 +175,7 @@
 #  define CONF_CLOCK_GCLK_7_OUTPUT_ENABLE         false
 
 /* Configure GCLK generator 8 */
-#  define CONF_CLOCK_GCLK_8_ENABLE                true
+#  define CONF_CLOCK_GCLK_8_ENABLE                true							//SLCAN-CAN
 #  define CONF_CLOCK_GCLK_8_RUN_IN_STANDBY        true
 #  define CONF_CLOCK_GCLK_8_CLOCK_SOURCE          SYSTEM_CLOCK_SOURCE_OSC48M
 #  define CONF_CLOCK_GCLK_8_PRESCALER             3								// this will generate 16MHz clock

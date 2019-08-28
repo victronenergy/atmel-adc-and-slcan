@@ -37,6 +37,7 @@
 #
 
 include lib/include.mk
+include sw_version.inc
 
 # Path to top level ASF directory relative to this project directory.
 PRJ_PATH = .
@@ -49,8 +50,8 @@ PART = samc21g18a
 
 # Application target name. Given with suffix .a for library and .elf for a
 # standalone application.
-TARGET_FLASH = cmake-build-debug/samc21_slcan_adc.elf
-TARGET_SRAM = cmake-build-debug/samc21_slcan_adc.elf
+TARGET_FLASH = cmake-build-debug/samc21_slcan_adc_sw$(SW_VERSION).elf
+TARGET_SRAM = cmake-build-debug/samc21_slcan_adc_sw$(SW_VERSION).elf
 
 # List of C source files.
 CSRCS = ${LIB_CSRCS}\
@@ -62,7 +63,8 @@ CSRCS = ${LIB_CSRCS}\
 		utils/board_setup.c \
 		utils/comm_interface_setup.c \
 		canbus/usb.c	\
-		
+		tasks/i2c_vitual_eeprom.c \
+
 
 # List of assembler source files.
 ASSRCS = 
@@ -124,16 +126,20 @@ CFLAGS =
 #   BOARD      Target board in use, see boards/board.h for a list.
 #   EXT_BOARD  Optional extension board in use, see boards/board.h for a list.
 CPPFLAGS = \
-       -D ARM_MATH_CM0PLUS=true			\
-       -D BOARD=USER_BOARD				\
-       -D CUSTOM_BOARD=CERBO_SLCAN_ADC	\
-       -D __SAMC21G18A__				\
-       -D USART_CALLBACK_MODE=true		\
-       -D ADC_CALLBACK_MODE=true		\
-       -D __FREERTOS__	\
-		-D SYSTICK_MODE	\
-		-D NDEBUG		\
-		-D TC_ASYNC=true
+		-D ARM_MATH_CM0PLUS=true		\
+		-D BOARD=USER_BOARD				\
+		-D CUSTOM_BOARD=CERBO_SLCAN_ADC	\
+		-D __SAMC21G18A__				\
+		-D USART_CALLBACK_MODE=true		\
+		-D ADC_CALLBACK_MODE=true		\
+		-D I2C_SLAVE_CALLBACK_MODE=true	\
+		-D WDT_CALLBACK_MODE=true		\
+		-D __FREERTOS__					\
+		-D SYSTICK_MODE					\
+		-D NDEBUG						\
+		-D TC_ASYNC=true 				\
+		-D SW_VERSION=$(SW_VERSION)
+
 
 # Extra flags to use when linking
 LDFLAGS = \

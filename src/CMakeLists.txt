@@ -27,23 +27,24 @@ set(SOURCE_FILES
 		lib/ASF/sam0/drivers/port/quick_start/qs_port_basic.h
 		lib/ASF/sam0/drivers/port/port.c
 		lib/ASF/sam0/drivers/port/port.h
-		lib/ASF/sam0/drivers/sercom/usart/quick_start/qs_usart_basic_use.h
-		lib/ASF/sam0/drivers/sercom/usart/quick_start_callback/qs_usart_callback.h
-		lib/ASF/sam0/drivers/sercom/usart/quick_start_dma/qs_usart_dma_use.h
-		lib/ASF/sam0/drivers/sercom/usart/quick_start_lin/qs_lin.h
 		lib/ASF/sam0/drivers/sercom/usart/usart.c
 		lib/ASF/sam0/drivers/sercom/usart/usart.h
 		lib/ASF/sam0/drivers/sercom/usart/usart_interrupt.c
 		lib/ASF/sam0/drivers/sercom/usart/usart_interrupt.h
-		lib/ASF/sam0/drivers/tc/tc_sam_l_c/tc.c
-		lib/ASF/sam0/drivers/tc/tc.h
-		lib/ASF/sam0/drivers/tc/tc_interrupt.h
-		lib/ASF/sam0/drivers/tc/tc_interrupt.c
+		lib/ASF/sam0/drivers/sercom/i2c/i2c_common.h
+		lib/ASF/sam0/drivers/sercom/i2c/i2c_slave.h
+		lib/ASF/sam0/drivers/sercom/i2c/i2c_slave_interrupt.h
+		lib/ASF/sam0/drivers/sercom/i2c/i2c_sam0/i2c_slave.c
+		lib/ASF/sam0/drivers/sercom/i2c/i2c_sam0/i2c_slave_interrupt.c
 		lib/ASF/sam0/drivers/sercom/sercom.c
 		lib/ASF/sam0/drivers/sercom/sercom.h
 		lib/ASF/sam0/drivers/sercom/sercom_interrupt.c
 		lib/ASF/sam0/drivers/sercom/sercom_interrupt.h
 		lib/ASF/sam0/drivers/sercom/sercom_pinout.h
+		lib/ASF/sam0/drivers/tc/tc_sam_l_c/tc.c
+		lib/ASF/sam0/drivers/tc/tc.h
+		lib/ASF/sam0/drivers/tc/tc_interrupt.h
+		lib/ASF/sam0/drivers/tc/tc_interrupt.c
 		lib/ASF/sam0/drivers/system/clock/clock_samc20_c21/clock.c
 		lib/ASF/sam0/drivers/system/clock/clock_samc20_c21/clock_config_check.h
 		lib/ASF/sam0/drivers/system/clock/clock_samc20_c21/clock_feature.h
@@ -229,7 +230,9 @@ set(SOURCE_FILES
 		tasks/adc_task.c
 		tasks/adc_task.h
 		canbus/usb.h
-		canbus/usb.c)
+		canbus/usb.c
+		tasks/i2c_vitual_eeprom.c
+		tasks/i2c_vitual_eeprom.h)
 
 
 
@@ -243,6 +246,7 @@ include_directories(lib/ASF/sam0/drivers/dma)
 include_directories(lib/ASF/sam0/drivers/can/module_config)
 include_directories(lib/ASF/sam0/drivers/port)
 include_directories(lib/ASF/sam0/drivers/sercom)
+include_directories(lib/ASF/sam0/drivers/sercom/i2c)
 include_directories(lib/ASF/sam0/drivers/sercom/usart)
 include_directories(lib/ASF/sam0/drivers/system)
 include_directories(lib/ASF/sam0/drivers/system/clock)
@@ -256,6 +260,7 @@ include_directories(lib/ASF/sam0/drivers/system/reset)
 include_directories(lib/ASF/sam0/drivers/system/reset/reset_sam_c)
 include_directories(lib/ASF/sam0/drivers/tc)
 include_directories(lib/ASF/sam0/drivers/nvm)
+include_directories(lib/ASF/sam0/drivers/wdt)
 include_directories(lib/ASF/sam0/utils)
 include_directories(lib/ASF/sam0/utils/cmsis/samc21/include)
 include_directories(lib/ASF/sam0/utils/cmsis/samc21/source)
@@ -284,6 +289,7 @@ add_definitions(-D CUSTOM_BOARD=PENTA_SLCAN_ADC)
 add_definitions(-D __SAMC21G18A__)
 add_definitions(-D USART_CALLBACK_MODE=true)
 add_definitions(-D ADC_CALLBACK_MODE=true)
+add_definitions(-D I2C_SLAVE_CALLBACK_MODE=true)
 add_definitions(-D __FREERTOS__)
 add_definitions(-D SYSTICK_MODE)
 add_definitions(-D NDEBUG)
