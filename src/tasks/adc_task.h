@@ -9,9 +9,7 @@
 #include "dma.h"
 #include "i2c_slave.h"
 #include "i2c_vitual_eeprom.h"
-
-typedef struct adc_module adc_module_t;
-typedef struct dma_resource dma_resource_t;
+#include "adc_methods.h"
 
 typedef struct {
 	adc_module_t *adc_instance0;

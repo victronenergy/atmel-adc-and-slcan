@@ -13,8 +13,6 @@ typedef struct {
 	uint16_t config_size;
 	uint8_t serial_no[16];
 	const uint16_t sw_rev;
-	uint16_t gain_correction;
-	uint16_t offset_correction;
 	uint16_t adc_tank_channel[2][4]; //double buffered, Channel 4-1
 	uint16_t adc_temp_channel[2][4]; //double buffered, Channel 4-1
 	uint16_t adc_counter; //counter, will be increased after each complete conversion round with buffer swap

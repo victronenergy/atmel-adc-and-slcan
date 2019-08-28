@@ -232,7 +232,9 @@ set(SOURCE_FILES
 		canbus/usb.h
 		canbus/usb.c
 		tasks/i2c_vitual_eeprom.c
-		tasks/i2c_vitual_eeprom.h)
+		tasks/i2c_vitual_eeprom.h
+		tasks/adc_methods.c
+		tasks/adc_methods.h)
 
 
 

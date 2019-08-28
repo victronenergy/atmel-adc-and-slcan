@@ -130,11 +130,6 @@ int main(void) {
 	}
 	ulog_s("\r\n");
 
-	if (cause == SYSTEM_RESET_CAUSE_POR) {
-		delay_s(1);
-		system_reset();
-	}
-
 	ulog_s("prepare Tasks\r\n");
 	TaskHandle_t task_handles[2];
 	TaskHandle_t can_task = vCreateCanTask(&params_task);
