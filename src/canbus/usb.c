@@ -434,7 +434,7 @@ bool usb_putc(uint8_t tx_byte, uint8_t cantask_id) {
 bool usb_byte2ascii(uint8_t tx_byte, uint8_t cantask_id) {
 	uint8_t highnibble = (uint8_t) (((tx_byte >> 4) < 10) ? ((tx_byte >> 4) & 0x0f) + 48 : ((tx_byte >> 4) & 0x0f) + 55);
 	if (!usb_putc(highnibble, cantask_id)) {
-		false;
+		return false;
 	}
 	uint8_t lownibble = (uint8_t) (((tx_byte & 0x0f) < 10) ? (tx_byte & 0x0f) + 48 : (tx_byte & 0x0f) + 55);
 	return usb_putc(lownibble, cantask_id);

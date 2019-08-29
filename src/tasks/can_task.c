@@ -37,93 +37,62 @@ void setup_can_instance(struct can_module *can_module, Can *can_hw, uint32_t bit
 bool adapt_rx_can_msg(struct can_module *const can_module, struct CAN_rx_msg_struct *CAN_rx_msg) {
 	bool messsage_read = false;
 	//FIFO buffers status
-	volatile CAN_RXF0S_Type *fifo0_status = (CAN_RXF0S_Type *) &(can_module->hw->RXF0S);
-	volatile CAN_RXF1S_Type *fifo1_status = (CAN_RXF1S_Type *) &(can_module->hw->RXF1S);
+	uint32_t fifo0_status = can_rx_get_fifo_status(can_module, 0);
 
 	//FIFO buffers fill level
-	uint32_t fifo0_fill_level = (uint32_t) fifo0_status->bit.F0FL;
-	uint32_t fifo1_fill_level = (uint32_t) fifo1_status->bit.F1FL;
+	uint8_t fifo0_fill_level = (uint8_t) (fifo0_status & CAN_RXF0S_F0FL_Msk);
 
 	// check for errors
 	volatile uint32_t status = can_read_interrupt_status(can_module);
-/*	if ((status & CAN_PROTOCOL_ERROR_ARBITRATION)
-		|| (status & CAN_PROTOCOL_ERROR_DATA)) {
-		port_pin_set_output_level(LEDPIN_C21_RED, LED_ACTIVE);
-		can_clear_interrupt_status(can_module, CAN_PROTOCOL_ERROR_ARBITRATION
-												| CAN_PROTOCOL_ERROR_DATA);
-		//ulog_s("Protocol error, please double check the clock in two boards. \r\n\r\n");
-		c_log('p');
-	}*/
-
 	if (status & CAN_PROTOCOL_ERROR_ARBITRATION) {
 		port_pin_set_output_level(LEDPIN_C21_RED, LED_ACTIVE);
 		can_clear_interrupt_status(can_module, CAN_PROTOCOL_ERROR_ARBITRATION);
-		//ulog_s("Protocol error, please double check the clock in two boards. \r\n\r\n");
 		c_log_s("p1");
 	}
 	if (status & CAN_PROTOCOL_ERROR_DATA) {
 		port_pin_set_output_level(LEDPIN_C21_RED, LED_ACTIVE);
 		can_clear_interrupt_status(can_module, CAN_PROTOCOL_ERROR_DATA);
-		//ulog_s("Protocol error, please double check the clock in two boards. \r\n\r\n");
 		c_log_s("p2");
 	}
 
 	// fifo0 is used for standard messages
 	if(fifo0_fill_level) {
-		uint32_t fifo0_getindex = fifo0_status->bit.F0GI + 0;	//returns the current index of the receive buffer
+		uint8_t fifo0_getindex = (uint8_t) ((fifo0_status & CAN_RXF0S_F0GI_Msk) >> CAN_RXF0S_F0GI_Pos); //returns the current index of the receive buffer
 		struct can_rx_element_fifo_0 rx_element_fifo_0;
 
-//		c_log_s("f0");
-		// fifo0 contains (new) data
-
-		if(fifo0_status->bit.RF0L){
+		// lost a message flag is set
+		if(fifo0_status & CAN_RXF0S_RF0L){
 			ulog_s("message lost!F0\r\n");
+			port_pin_set_output_level(LEDPIN_C21_RED, LED_ACTIVE);
 		}
-		if(fifo0_status->bit.F0F){
+
+		// fifo full flag is set
+		if(fifo0_status & CAN_RXF0S_F0F){
 			ulog_s("FIFO full!F0\r\n");
 			ulog_s("level: ");
-			xlog((uint8_t*) &fifo0_fill_level, 4);
+			xlog(&fifo0_fill_level, 1);
 			ulog_s("\r\nindex pos: ");
-			xlog((uint8_t*) &fifo0_getindex, 1);
+			xlog(&fifo0_getindex, 1);
 			ulog_s("\r\n");
+			port_pin_set_output_level(LEDPIN_C21_RED, LED_ACTIVE);
 		}
 
 		if (can_get_rx_fifo_0_element(can_module, &rx_element_fifo_0, fifo0_getindex) == STATUS_OK) {
+			if (rx_element_fifo_0.R0.bit.XTD) {
+				CAN_rx_msg->format = EXTENDED_FRAME;
+				CAN_rx_msg->id = (uint32_t) (rx_element_fifo_0.R0.bit.ID & CAN_RX_ELEMENT_R0_ID_Msk);
+			} else {
+				CAN_rx_msg->format = STANDARD_FRAME;
+				CAN_rx_msg->id = rx_element_fifo_0.R0.bit.ID & 0x7FF;
+			}
 
-			CAN_rx_msg->format = STANDARD_FRAME;
-			CAN_rx_msg->id = rx_element_fifo_0.R0.bit.ID;
 			CAN_rx_msg->rtr = (uint8_t) rx_element_fifo_0.R0.bit.RTR;
 			CAN_rx_msg->len = (uint8_t) (rx_element_fifo_0.R1.bit.DLC + 0);
 			memcpy(CAN_rx_msg->data, rx_element_fifo_0.data, CAN_rx_msg->len);
 			messsage_read = true;
-		}
-		can_rx_fifo_acknowledge(can_module, 0, fifo0_getindex);
-	}
-	// fifo1 is used for extended messages
-	else if (fifo1_fill_level) {
-		uint32_t fifo1_getindex = fifo1_status->bit.F1GI + 0;	//returns the current index of the receive buffer
-		struct can_rx_element_fifo_1 rx_element_fifo_1;
-//		c_log_s("f1");
-		// fifo1 contains (new) data
-
-		if(fifo1_status->bit.RF1L){
-			ulog_s("message lost!F1\r\n");
-		}
-		if(fifo1_status->bit.F1F){
-			ulog_s("FIFO full!F1\r\n");
+			can_rx_fifo_acknowledge(can_module, 0, fifo0_getindex);
 		}
 
-		if (can_get_rx_fifo_1_element(can_module, &rx_element_fifo_1, fifo1_getindex) == STATUS_OK) {
-
-			CAN_rx_msg->format = EXTENDED_FRAME;
-			CAN_rx_msg->id = rx_element_fifo_1.R0.bit.ID;
-			CAN_rx_msg->rtr = (uint8_t) rx_element_fifo_1.R0.bit.RTR;
-			CAN_rx_msg->len = (uint8_t) (rx_element_fifo_1.R1.bit.DLC + 0);
-			memcpy(CAN_rx_msg->data, rx_element_fifo_1.data, CAN_rx_msg->len);
-
-			messsage_read = true;
-		}
-		can_rx_fifo_acknowledge(can_module, 1, fifo1_getindex);
 	}
 	return messsage_read;
 }
@@ -229,14 +198,23 @@ void vCanTask(void *pvParameters) {
 			bool new_can_message = adapt_rx_can_msg(&can_module, &CAN_rx_msg);
 			if (new_can_message) {
 //			c_log('n');
+
+/*				ulog_s("addr: ");
+				xlog((uint8_t *) &CAN_rx_msg.id, 4);
+				ulog_s("\r\n");
+*/
 				// check frame format
-				if (CAN_rx_msg.format == STANDARD_FRAME) {    // Standard Frame
+				if (CAN_rx_msg.format == STANDARD_FRAME) {		// Standard Frame
 					if (!CAN_rx_msg.rtr) {
 						usb_putc(SEND_11BIT_ID, cantask_id);
 					}        // send command tag
 					else {
 						usb_putc(SEND_R11BIT_ID, cantask_id);
 					}
+
+					//TODO remove hack, needed to get the same address on standard and extended frames!
+					CAN_rx_msg.id >>= 1;
+
 					// send high byte of ID
 					if (((CAN_rx_msg.id >> 8) & 0x0F) < 10)
 						usb_putc((uint8_t) (((CAN_rx_msg.id >> 8) & 0x0F) + 48), cantask_id);
@@ -244,7 +222,7 @@ void vCanTask(void *pvParameters) {
 						usb_putc((uint8_t) (((CAN_rx_msg.id >> 8) & 0x0F) + 55), cantask_id);
 					// send low byte of ID
 					usb_byte2ascii((uint8_t) (CAN_rx_msg.id & 0xFF), cantask_id);
-				} else {        // Extended Frame
+				} else {        								// Extended Frame
 					if (!CAN_rx_msg.rtr) {
 						usb_putc(SEND_29BIT_ID, cantask_id);
 					}        // send command tag
@@ -366,17 +344,26 @@ uart_command_return_t exec_uart_cmd(struct can_module *can_module, Can *can_inst
 			// open CAN channel
 			c_log('O');
 			return_code = uart_command_open_can_channel(can_module, can_instance, can_bitrate, can_flags);
+			if(return_code != RETURN_ERROR) {
+				port_pin_set_output_level(LEDPIN_C21_GREEN, LED_ACTIVE);
+			}
 			break;
 
 		case CLOSE_CAN_CHAN:
 			// close CAN channel
 			c_log('C');
 			return_code = uart_command_close_can_channel(can_module, can_flags);
+			if(return_code != RETURN_ERROR) {
+				port_pin_set_output_level(LEDPIN_C21_GREEN, LED_INACTIVE);
+			}
 			break;
 
 		case LISTEN_ONLY:
 			c_log('L');
 			return_code = uart_command_listen_only_mode(can_module, can_instance, can_bitrate, can_flags);
+			if(return_code != RETURN_ERROR) {
+				port_pin_set_output_level(LEDPIN_C21_GREEN, LED_ACTIVE);
+			}
 			break;
 
 		case SEND_R11BIT_ID:

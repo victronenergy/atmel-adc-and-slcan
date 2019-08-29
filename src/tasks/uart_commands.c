@@ -32,7 +32,7 @@ void setup_can_instance(struct can_module *can_module, Can *can_hw, uint32_t bit
 	can_get_config_defaults(&config_can);
 
 	config_can.nonmatching_frames_action_standard = CAN_NONMATCHING_FRAMES_FIFO_0;
-	config_can.nonmatching_frames_action_extended = CAN_NONMATCHING_FRAMES_FIFO_1;
+	config_can.nonmatching_frames_action_extended = CAN_NONMATCHING_FRAMES_FIFO_0;
 	config_can.remote_frames_standard_reject = false;
 	config_can.remote_frames_extended_reject = false;
 	config_can.extended_id_mask = 0x00000000;
@@ -155,8 +155,6 @@ uart_command_return_t uart_command_read_status(struct can_module *can_module, ui
 
 
 uart_command_return_t uart_command_set_bitrate(uint8_t cmd_len, uint8_t *cmd_buf_pntr, uint32_t *can_bitrate, can_flags_t *can_flags) {
-	port_pin_set_output_level(LEDPIN_C21_RED, LED_INACTIVE);
-
 	// check if CAN controller is in reset mode
 	if (can_flags->bus_on) {
 		c_log('e');

@@ -86,7 +86,7 @@ void vAdcTask(void *pvParameters){
 	DmacDescriptor dma_desc[4]= {SECTION_DMAC_DESCRIPTOR};
 	port_pin_set_output_level(PIN_PA15, false);
 
-	taskENTER_CRITICAL(  );
+//	taskENTER_CRITICAL(  );
 	// configure adc with dma
 	{
 		uint32_t dest_ptr_addr[4];
@@ -108,7 +108,7 @@ void vAdcTask(void *pvParameters){
 
 	// configure i2c slave
 	configure_i2c_slave(((adctask_params *)pvParameters)->i2c_instance,SLAVE_ADDRESS);
-	taskEXIT_CRITICAL(  );
+//	taskEXIT_CRITICAL(  );
 
 
 	while(1) {
