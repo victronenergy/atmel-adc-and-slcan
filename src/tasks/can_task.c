@@ -150,6 +150,8 @@ void vCanTask(void *pvParameters) {
 	ulog( &tmp,1);
 	ulog_s("...\r\n");
 
+	uint8_t sequence_counter = 0;
+
 	for (;;) {
 
 
@@ -197,7 +199,7 @@ void vCanTask(void *pvParameters) {
 		if (can_flags.bus_on) {
 			bool new_can_message = adapt_rx_can_msg(&can_module, &CAN_rx_msg);
 			if (new_can_message) {
-//			c_log('n');
+//				c_log('n');
 
 /*				ulog_s("addr: ");
 				xlog((uint8_t *) &CAN_rx_msg.id, 4);
@@ -206,10 +208,9 @@ void vCanTask(void *pvParameters) {
 				// check frame format
 				if (CAN_rx_msg.format == STANDARD_FRAME) {		// Standard Frame
 					if (!CAN_rx_msg.rtr) {
-						usb_putc(SEND_11BIT_ID, cantask_id);
-					}        // send command tag
-					else {
-						usb_putc(SEND_R11BIT_ID, cantask_id);
+						usb_putc(SEND_11BIT_ID, cantask_id);	// can message with 11bit ID
+					} else {
+						usb_putc(SEND_R11BIT_ID, cantask_id);	// remote message with 11bit ID
 					}
 
 					//TODO remove hack, needed to get the same address on standard and extended frames!
@@ -224,10 +225,9 @@ void vCanTask(void *pvParameters) {
 					usb_byte2ascii((uint8_t) (CAN_rx_msg.id & 0xFF), cantask_id);
 				} else {        								// Extended Frame
 					if (!CAN_rx_msg.rtr) {
-						usb_putc(SEND_29BIT_ID, cantask_id);
-					}        // send command tag
-					else {
-						usb_putc(SEND_R29BIT_ID, cantask_id);
+						usb_putc(SEND_29BIT_ID, cantask_id);	// can message with 29bit ID
+					} else {
+						usb_putc(SEND_R29BIT_ID, cantask_id);	// remote message with 29bit ID
 					}
 					// send ID bytes
 					usb_byte2ascii((uint8_t) ((CAN_rx_msg.id >> 24) & 0xFF), cantask_id);
@@ -237,11 +237,12 @@ void vCanTask(void *pvParameters) {
 				}
 				// send data length code
 				usb_putc((uint8_t) (CAN_rx_msg.len + '0'), cantask_id);
-				if (!CAN_rx_msg.rtr) {    // send data only if no remote frame request
+				if (!CAN_rx_msg.rtr) {	// send data only if no remote frame request
 					// send data bytes
 					for (uint8_t can_rxmsg_pos = 0; can_rxmsg_pos < CAN_rx_msg.len; can_rxmsg_pos++)
 						usb_byte2ascii(CAN_rx_msg.data[can_rxmsg_pos],cantask_id);
 				}
+
 				/*	TODO clarify: TIMESTAMP required at all?
 				// send time stamp if required
 				if (ram_timestamp_status != 0) {
@@ -252,6 +253,18 @@ void vCanTask(void *pvParameters) {
 				// send end tag
 				usb_putc(RETURN_CR,cantask_id);
 				usb_send(usart_instance, cantask_id);
+
+				//DEBUG can-sequence checker!
+				if (CAN_rx_msg.id == 4) {
+					if (CAN_rx_msg.data[0] != sequence_counter) {
+						// we have a missmatch!
+						port_pin_set_output_level(PIN_PA14, true);
+						sequence_counter = CAN_rx_msg.data[0];
+						port_pin_set_output_level(PIN_PA14, false);
+					}
+					// setup counter for next expected sequence number
+					sequence_counter++;
+				}
 			}
 		}
 //		if (cantask_id)
