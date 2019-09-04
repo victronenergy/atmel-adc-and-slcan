@@ -9,10 +9,6 @@
 #include "uart_commands.h"
 
 
-
-
-
-
 //TODO move to helper file?
 
 void reset_can_errorflags(can_flags_t *CAN_flags);
@@ -146,10 +142,15 @@ uart_command_return_t uart_command_read_status(struct can_module *can_module, ui
 	// reset error flags
 	reset_can_errorflags(can_flags);
 
-	if (!usb_putc(READ_STATUS,cantask_id))
+	if (!usb_putc(READ_STATUS,cantask_id)) {
+		c_log_s("F1");
 		return ERROR_BUSY;
-	if (!usb_byte2ascii((uint8_t) flags,cantask_id))
+	}
+
+	if (!usb_byte2ascii((uint8_t) flags,cantask_id)) {
+		c_log_s("F2");
 		return ERROR_BUSY;
+	}
 	return RETURN_CR;
 }
 
