@@ -167,12 +167,10 @@ inline static void usart_write_callback(struct usart_module *const usart_module,
 
 void usart_write_callback_cantask0(struct usart_module *const usart_module) {
 	usart_write_callback(usart_module, 0);
-	port_pin_set_output_level(LEDPIN_C21_GREEN, LED_INACTIVE);
 }
 
 void usart_write_callback_cantask1(struct usart_module *const usart_module) {
 	usart_write_callback(usart_module, 1);
-	port_pin_set_output_level(LEDPIN_C21_GREEN, LED_INACTIVE);
 }
 
 void configure_usart_callbacks(usart_module_t *usart_instance, uint8_t cantask_id) {

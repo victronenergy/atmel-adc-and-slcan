@@ -136,7 +136,7 @@ void configure_adc_dma(dma_resource_t* dma_resource[2], adc_module_t* adc_instan
 
 
 void dma_callback_transfer_done0(struct dma_resource *const resource) {
-	port_pin_set_output_level(PIN_PA14, false);
+//	port_pin_set_output_level(PIN_PA14, false);
 }
 
 void dma_callback_transfer_done1(struct dma_resource * const resource) {

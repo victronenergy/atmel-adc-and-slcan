@@ -142,9 +142,9 @@ void vAdcTask(void *pvParameters){
 			port_pin_set_output_level(PIN_PA15, false);
 			port_pin_set_output_level(PIN_PA15, true);
 
-			port_pin_set_output_level(PIN_PA14, false);
+//			port_pin_set_output_level(PIN_PA14, false);
 			port_pin_set_output_level(PIN_PA19, false);
-			port_pin_set_output_level(PIN_PA14, true);
+//			port_pin_set_output_level(PIN_PA14, true);
 			port_pin_set_output_level(PIN_PA19, true);
 			adc_trigger_new_conv();
 		}
