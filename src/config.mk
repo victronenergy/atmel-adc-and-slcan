@@ -46,7 +46,7 @@ PRJ_PATH = .
 ARCH = cortex-m0plus
 
 # Target part: none, sam3n4 or sam4l4aa
-PART = samc21g18a
+PART = SAMC21G18A
 
 # Application target name. Given with suffix .a for library and .elf for a
 # standalone application.
@@ -130,7 +130,7 @@ CPPFLAGS = \
 		-D ARM_MATH_CM0PLUS=true		\
 		-D BOARD=USER_BOARD				\
 		-D CUSTOM_BOARD=CERBO_SLCAN_ADC	\
-		-D __SAMC21G18A__				\
+		-D __$(PART)__					\
 		-D USART_CALLBACK_MODE=true		\
 		-D ADC_CALLBACK_MODE=true		\
 		-D I2C_SLAVE_CALLBACK_MODE=true	\
