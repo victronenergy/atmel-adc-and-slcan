@@ -33,6 +33,7 @@ void setup_can_instance(struct can_module *can_module, Can *can_hw, uint32_t bit
 	config_can.remote_frames_extended_reject = false;
 	config_can.extended_id_mask = 0x00000000;
 	config_can.run_in_standby = true;
+	config_can.automatic_retransmission = false;
 
 	// make sure that the hw is off.
 //	can_stop(can_module);

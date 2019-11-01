@@ -157,7 +157,11 @@ void vCanTask(void *pvParameters) {
 				usb_send(usart_instance, cantask_id);
 			}
 			// flush command buffer
-			clear_cmd_buf(usart_instance, cantask_id, buf_num);
+			if (r != ERROR_BUSY) {
+				port_pin_set_output_level(PIN_PA19, false);
+				port_pin_set_output_level(PIN_PA19, true);
+				clear_cmd_buf(usart_instance, cantask_id, buf_num);
+			}
 		}
 
 		/**
