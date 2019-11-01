@@ -28,11 +28,12 @@
 #define __USB_H__
 
 #define USB_CMD_BUF_SIZE 32
-#define USB_CMD_BUF_COUNT 8 // must be power of 2
+#define USB_CMD_TX_BUF_COUNT 2 // must be power of 2 (minimum 2)
+#define USB_CMD_RX_BUF_COUNT 1 // must be power of 2
 
 typedef struct {
-	uint8_t usart_buf_tx[USB_CMD_BUF_COUNT][USB_CMD_BUF_SIZE];
-	uint8_t usart_buf_rx[USB_CMD_BUF_COUNT][USB_CMD_BUF_SIZE];
+	uint8_t usart_buf_tx[USB_CMD_TX_BUF_COUNT][USB_CMD_BUF_SIZE];
+	uint8_t usart_buf_rx[USB_CMD_RX_BUF_COUNT][USB_CMD_BUF_SIZE];
 	uint8_t fill_tx;
 	uint8_t fill_rx;
 	uint8_t read_tx;
@@ -40,7 +41,7 @@ typedef struct {
 	uint32_t tx_pending_map;
 	uint32_t rx_pending_map;
 	int8_t tx_insert_pos;
-	int8_t buf_tx_len[USB_CMD_BUF_COUNT];
+	int8_t buf_tx_len[USB_CMD_TX_BUF_COUNT];
 	int8_t rx_insert_pos;
 	uint8_t rx_fill_level;
 	uint8_t tx_fill_level;

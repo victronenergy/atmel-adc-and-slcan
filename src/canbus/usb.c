@@ -103,13 +103,13 @@ inline static void usart_read_callback(struct usart_module *const usart_module, 
 		buf->rx_fill_level++;
 //		write_byte_to_wire((uint8_t) buf->rx_fill_level, PIN_PA20);
 //		if (buf->rx_pending_map & (1 << ((buf->fill_rx + 1) % USB_CMD_BUF_COUNT))) {
-		if (((buf->fill_rx + 1) % USB_CMD_BUF_COUNT) == buf->read_rx) {
+		if (((buf->fill_rx + 1) % USB_CMD_RX_BUF_COUNT) == buf->read_rx) {
 			//if this happens the commands are not processed fast enough and to prevent overwriting the last stored
 			//command we are now disabling receiving!
 			buf->rx_buf_overrun = true;
 //			port_pin_set_output_level(PIN_PA14, true);
 		}
-		buf->fill_rx = (uint8_t) ((buf->fill_rx + 1) % USB_CMD_BUF_COUNT);
+		buf->fill_rx = (uint8_t) ((buf->fill_rx + 1) % USB_CMD_RX_BUF_COUNT);
 		buf->rx_insert_pos = -1;
 		taskEXIT_CRITICAL();
 	}
@@ -151,10 +151,10 @@ inline static void usart_write_callback(struct usart_module *const usart_module,
 			//successfull started job
 			buf->buf_tx_len[buf->read_tx] = 0;
 			buf->tx_pending_map &= ~(1 << buf->read_tx);
-			buf->read_tx = (uint8_t) ((buf->read_tx + 1) % USB_CMD_BUF_COUNT);
+			buf->read_tx = (uint8_t) ((buf->read_tx + 1) % USB_CMD_TX_BUF_COUNT);
 			if (buf->tx_buf_overrun) {
 				buf->tx_pending_map |= (1 << buf->fill_tx);
-				buf->fill_tx = (uint8_t) ((buf->fill_tx + 1) % USB_CMD_BUF_COUNT);
+				buf->fill_tx = (uint8_t) ((buf->fill_tx + 1) % USB_CMD_TX_BUF_COUNT);
 				buf->tx_insert_pos = 0;
 				buf->tx_buf_overrun = false;
 			}
@@ -270,12 +270,12 @@ bool clear_cmd_buf(usart_module_t *usart_module, uint8_t cantask_id, uint32_t bu
 	}
 //	ulog_s(" clear: ");
 //	xlog((uint8_t *) &buf_num,1);
-	if (buf_num < USB_CMD_BUF_COUNT) {
+	if (buf_num < USB_CMD_RX_BUF_COUNT) {
 		taskENTER_CRITICAL();
 		memset((void *) buf->usart_buf_rx[buf_num], 0x00, USB_CMD_BUF_SIZE);
 		buf->rx_pending_map &= ~(1 << buf_num);
 		buf->rx_fill_level--;
-		buf->read_rx = (uint8_t) ((buf->read_rx + 1) % USB_CMD_BUF_COUNT);
+		buf->read_rx = (uint8_t) ((buf->read_rx + 1) % USB_CMD_RX_BUF_COUNT);
 
 //		buf->rx_pending_map = 0;
 //		for (uint32_t i = 0; i < USB_CMD_BUF_COUNT; i++) {
@@ -324,12 +324,13 @@ bool start_canbus_usart(usart_module_t *usart_instance, usart_buf_t *buf_struct,
 	buf_struct->read_tx = 0;
 	buf_struct->rx_fill_level = 0;
 	buf_struct->tx_fill_level = 0;
-	for (uint8_t i = 0; i < USB_CMD_BUF_COUNT; i++) {
-		memset(buf_struct->usart_buf_rx[i], 0x00, USB_CMD_BUF_SIZE);
+	for (uint8_t i = 0; i < USB_CMD_TX_BUF_COUNT; i++) {
 		memset(buf_struct->usart_buf_tx[i], 0x00, USB_CMD_BUF_SIZE);
 		buf_struct->buf_tx_len[i] = 0;
 	}
-
+	for (uint8_t i = 0; i < USB_CMD_RX_BUF_COUNT; i++) {
+		memset(buf_struct->usart_buf_rx[i], 0x00, USB_CMD_BUF_SIZE);
+	}
 	return usart_read_job(usart_instance, (uint16_t *) &(buf_struct->usart_buf_rx[buf_struct->fill_rx][buf_struct->rx_insert_pos]));
 }
 
@@ -371,14 +372,14 @@ enum status_code usb_send(usart_module_t *module, uint8_t cantask_id) {
 	taskENTER_CRITICAL();
 	if (buf->tx_insert_pos > 0){
 		buf->buf_tx_len[buf->fill_tx] = buf->tx_insert_pos;
-		if (((buf->fill_tx + 1) % USB_CMD_BUF_COUNT) == buf->read_tx) {
+		if (((buf->fill_tx + 1) % USB_CMD_TX_BUF_COUNT) == buf->read_tx) {
 //		if (buf->tx_pending_map & ((buf->fill_tx + 1) % USB_CMD_BUF_COUNT)) {
 			//if this happens the commands are not processed fast enough and we are now starting to overwrite the last stored command!
 			buf->tx_buf_overrun = true;
 			result = STATUS_ERR_OVERFLOW;
 		} else {
 			buf->tx_pending_map |= (1 << buf->fill_tx);
-			buf->fill_tx = (uint8_t) ((buf->fill_tx + 1) % USB_CMD_BUF_COUNT);
+			buf->fill_tx = (uint8_t) ((buf->fill_tx + 1) % USB_CMD_TX_BUF_COUNT);
 			buf->tx_insert_pos = 0;
 		}
 	}
