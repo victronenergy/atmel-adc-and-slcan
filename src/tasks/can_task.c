@@ -9,7 +9,7 @@
 #include <cmsis/samc21/include/component/can.h>
 #include <can.h>
 #include "slcan.h"
-#include "uart_commands.h"
+#include "uart_methods.h"
 
 /*
  * Prototypes

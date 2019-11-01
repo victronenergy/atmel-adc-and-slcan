@@ -225,8 +225,8 @@ set(SOURCE_FILES
 		tasks/stack_task.h
 		tasks/can_task.c
 		tasks/can_task.h
-		tasks/uart_commands.c
-		tasks/uart_commands.h
+		tasks/uart_methods.c
+		tasks/uart_methods.h
 		tasks/slcan.h
 		tasks/adc_task.c
 		tasks/adc_task.h

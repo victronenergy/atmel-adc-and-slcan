@@ -6,7 +6,7 @@
 #include "can.h"
 #include "usb.h"
 #include "slcan.h"
-#include "uart_commands.h"
+#include "uart_methods.h"
 #include "can_methods.h"
 
 
