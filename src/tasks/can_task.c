@@ -52,8 +52,6 @@ void vCanTask(void *pvParameters) {
 
 	configure_usart_callbacks(usart_instance, cantask_id);
 
-	struct can_rx_element_fifo_0 rx_message;
-
 	start_canbus_usart(usart_instance, &usart_buf, cantask_id);
 
 	ulog_s("start CAN Task ");
@@ -89,7 +87,7 @@ void vCanTask(void *pvParameters) {
 		 * CAN TO UART HANDLING
 		 */
 		if (can_flags.bus_on) {
-			bool new_can_message = check_and_transfer_can_message_to_uart(&can_module, &rx_message, cantask_id, &sequence_counter);
+			bool new_can_message = check_and_transfer_can_message_to_uart(&can_module, cantask_id, &sequence_counter);
 			if (new_can_message) {
 				usb_send(usart_instance, cantask_id);
 			}
