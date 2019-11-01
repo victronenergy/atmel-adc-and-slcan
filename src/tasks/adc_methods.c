@@ -31,7 +31,6 @@ void configure_adc(adc_module_t *adc_instance0, adc_module_t *adc_instance1) {
 	config_adc.clock_source		= GCLK_GENERATOR_2;
 	config_adc.clock_prescaler	= ADC_CLOCK_PRESCALER_DIV16;
 	config_adc.reference		= ADC_REFERENCE_INTVCC2;
-//	config_adc.reference		= ADC_REFERENCE_AREFA;
 	config_adc.negative_input	= ADC_NEGATIVE_INPUT_GND;
 	config_adc.freerunning		= false;
 	config_adc.left_adjust		= false;
@@ -106,8 +105,6 @@ void configure_adc_dma(dma_resource_t* dma_resource[2], adc_module_t* adc_instan
 	configASSERT(dma_desc);
 	configASSERT(dest_ptr_adr)
 
-	ulog_s("point 1\r\n");
-
 	// configue adc (ADC0 and ADC1)
 	configure_adc(adc_instances[0], adc_instances[1]);
 
@@ -136,11 +133,9 @@ void configure_adc_dma(dma_resource_t* dma_resource[2], adc_module_t* adc_instan
 
 
 void dma_callback_transfer_done0(struct dma_resource *const resource) {
-//	port_pin_set_output_level(PIN_PA14, false);
 }
 
 void dma_callback_transfer_done1(struct dma_resource * const resource) {
-	port_pin_set_output_level(PIN_PA19, false);
 	inc_adc_data_counter();
 }
 
