@@ -179,9 +179,10 @@ void vCanTask(void *pvParameters) {
 				usb_send(usart_instance, cantask_id);
 			}
 			// flush command buffer
-			if (r != ERROR_BUSY) {
+//			if (r != ERROR_BUSY) {
 				clear_cmd_buf(usart_instance, cantask_id, buf_num);
-			}
+//			}
+
 		}
 
 //		if (cantask_id) {
