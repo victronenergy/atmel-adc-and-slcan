@@ -101,18 +101,8 @@ enum status_code _i2c_send_data(i2c_module_t *i2c_module, uint8_t length, uint8_
  * @param module
  */
 void i2c_callback_master_read_request(i2c_module_t *module) {
-	port_pin_set_output_level(PIN_PA20, true);
-//	c_log_s(" r-");
-//	uint32_t status = i2c_slave_get_status(module);
-//	c_log((uint8_t) ((0x0F & (status>>8)) + 0x30));
-//	c_log((uint8_t) ((0x0F & (status>>4)) + 0x30));
-//	c_log((uint8_t) ((0x0F & (status)) + 0x30));
 	//start read 1 byte (command/address byte)
-	enum status_code stat = _i2c_receive_data(module, 1, &i2c_data_address);
-	if (stat == STATUS_BUSY) {
-//		c_log_s("-E_B");
-	}
-	port_pin_set_output_level(PIN_PA20, false);
+	_i2c_receive_data(module, 1, &i2c_data_address);
 }
 
 
@@ -121,16 +111,6 @@ void i2c_callback_master_read_request(i2c_module_t *module) {
  * @param module i2c_module instance object
  */
 void i2c_callback_slave_read_complete(i2c_module_t *module) {
-	port_pin_set_output_level(PIN_PA20, true);
-//	c_log_s(" R-");
-	uint32_t status = i2c_slave_get_status(module);
-//	c_log((uint8_t) ((0x0F & (status>>8)) + 0x30));
-//	c_log((uint8_t) ((0x0F & (status>>4)) + 0x30));
-//	c_log((uint8_t) ((0x0F & (status)) + 0x30));
-	if (status & I2C_SLAVE_STATUS_REPEATED_START) {
-//		c_log_s("-S4");
-	}
-	port_pin_set_output_level(PIN_PA20, false);
 }
 
 
@@ -139,37 +119,18 @@ void i2c_callback_slave_read_complete(i2c_module_t *module) {
  * @param module i2c_module instance object
  */
 void i2c_callback_master_write_request(i2c_module_t *module) {
-	port_pin_set_output_level(PIN_PA20, true);
-//	c_log_s(" w-");
-
-
-	uint32_t status = i2c_slave_get_status(module);
-//	c_log((uint8_t) ((0x0F & (status>>8)) + 0x30));
-//	c_log((uint8_t) ((0x0F & (status>>4)) + 0x30));
-//	c_log((uint8_t) ((0x0F & (status)) + 0x30));
-	if (status & I2C_SLAVE_STATUS_REPEATED_START) {
-//		c_log_s("-S3");
-	}
-
 	uint8_t length = 0;
 	//check if the data address is inside the valid eeprom space
 	if (i2c_data_address < EEPROM_USED_SIZE) {
 		//calculate allowed bytes to send
 		length = EEPROM_USED_SIZE - i2c_data_address;
-		enum status_code stat = _i2c_send_data(module, length, &(eeprom_data_ptr->array[i2c_data_address]));
-		if (stat == STATUS_BUSY) {
-//			c_log_s("-E_B");
-		}
+		_i2c_send_data(module, length, &(eeprom_data_ptr->array[i2c_data_address]));
 	} else {
 		//start a single write to act like an eeprom. the single byte will be send and then the interrupts are disabled
 		//because the buffer is empty, which will result in all following bytes are also read as 0xFF from master.
 		uint8_t tmp = 0xff;
-		enum status_code stat = _i2c_send_data(module, 1, &(tmp));
-		if (stat == STATUS_BUSY) {
-//			c_log_s("-E_B");
-		}
+		_i2c_send_data(module, 1, &(tmp));
 	}
-	port_pin_set_output_level(PIN_PA20, false);
 }
 
 
@@ -178,16 +139,6 @@ void i2c_callback_master_write_request(i2c_module_t *module) {
  * @param module i2c_module instance object
  */
 void i2c_callback_slave_write_complete(i2c_module_t *module) {
-	port_pin_set_output_level(PIN_PA20, true);
-//	c_log_s(" W-");
-	uint32_t status = i2c_slave_get_status(module);
-//	c_log((uint8_t) ((0x0F & (status>>8)) + 0x30));
-//	c_log((uint8_t) ((0x0F & (status>>4)) + 0x30));
-//	c_log((uint8_t) ((0x0F & (status)) + 0x30));
-	if (status & I2C_SLAVE_STATUS_REPEATED_START) {
-//		c_log_s("-S2");
-	}
-	port_pin_set_output_level(PIN_PA20, false);
 }
 
 
@@ -196,16 +147,6 @@ void i2c_callback_slave_write_complete(i2c_module_t *module) {
  * @param module i2c_module instance object
  */
 void i2c_callback_transfer_error(i2c_module_t *module) {
-	port_pin_set_output_level(PIN_PA20, true);
-//	c_log_s(" T-");
-	uint32_t status = i2c_slave_get_status(module);
-//	c_log((uint8_t) ((0x0F & (status>>8)) + 0x30));
-//	c_log((uint8_t) ((0x0F & (status>>4)) + 0x30));
-//	c_log((uint8_t) ((0x0F & (status)) + 0x30));
-	if (status & I2C_SLAVE_STATUS_REPEATED_START) {
-//		c_log_s("-S5");
-	}
-	port_pin_set_output_level(PIN_PA20, false);
 }
 
 
@@ -214,13 +155,6 @@ void i2c_callback_transfer_error(i2c_module_t *module) {
  * @param module i2c_module instance object
  */
 void i2c_callback_error(i2c_module_t *module) {
-	port_pin_set_output_level(PIN_PA20, true);
-//	c_log('E');
-	uint32_t status = i2c_slave_get_status(module);
-	if (status & I2C_SLAVE_STATUS_REPEATED_START) {
-//		c_log_s("S6");
-	}
-	port_pin_set_output_level(PIN_PA20, false);
 }
 
 
