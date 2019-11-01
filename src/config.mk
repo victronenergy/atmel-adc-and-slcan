@@ -65,6 +65,7 @@ CSRCS = ${LIB_CSRCS}\
 		canbus/usb.c	\
 		tasks/i2c_vitual_eeprom.c \
 		tasks/adc_methods.c \
+		tasks/can_methods.c \
 
 
 # List of assembler source files.

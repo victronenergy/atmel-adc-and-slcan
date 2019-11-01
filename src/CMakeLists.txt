@@ -235,7 +235,9 @@ set(SOURCE_FILES
 		tasks/i2c_vitual_eeprom.c
 		tasks/i2c_vitual_eeprom.h
 		tasks/adc_methods.c
-		tasks/adc_methods.h)
+		tasks/adc_methods.h
+		tasks/can_methods.c
+		tasks/can_methods.h)
 
 
 
