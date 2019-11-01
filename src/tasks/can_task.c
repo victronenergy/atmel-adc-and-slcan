@@ -97,16 +97,6 @@ bool adapt_rx_can_msg(struct can_module *const can_module, struct CAN_rx_msg_str
 	return messsage_read;
 }
 
-/*
- * slcan cmds
- *
- *	sudo slcand -o -c -s5 -S 921600 /dev/ttyUSB0 can0
- *	sudo slcan_attach /dev/ttyUSB0
- *	sudo ifconfig can0 up
- *
- *
- */
-
 /**
  * CanTask handles data incoming from the CAN interface(s) as well as via the UART interface
  *
@@ -153,13 +143,6 @@ void vCanTask(void *pvParameters) {
 	uint8_t sequence_counter = 0;
 
 	for (;;) {
-
-
-//		if (cantask_id)
-//			port_pin_set_output_level(PIN_PA15, true);
-//		else
-//			port_pin_set_output_level(PIN_PA24, true);
-
 		/**
 		 * UART TO CAN HANDLING
 		 */
@@ -167,32 +150,15 @@ void vCanTask(void *pvParameters) {
 		uint8_t *buf = NULL;
 		enum_usb_return_t new_cmd_available = get_complete_cmd(&buf, &buf_num, cantask_id);
 		if (new_cmd_available == NEW_CMD || new_cmd_available == BUF_OVERRUN) {
-//			ulog_s(" new: ");
-//			xlog((uint8_t *) &buf_num,1);
-//			ulog_s(" ");
-//			xlog(buf, 10);
 			// Execute USB command and return status to terminal
 			uint8_t r = exec_uart_cmd(&can_module, can_instance, buf, &can_flags, cantask_id, &can_bitrate);
-//			xlog((uint8_t *) &r,1);
 			if (r != NO_RETURN && r != ERROR_BUSY) { // check if we have to send something back to the host.
 				usb_putc(r, cantask_id);
 				usb_send(usart_instance, cantask_id);
 			}
 			// flush command buffer
-//			if (r != ERROR_BUSY) {
-				clear_cmd_buf(usart_instance, cantask_id, buf_num);
-//			}
-
+			clear_cmd_buf(usart_instance, cantask_id, buf_num);
 		}
-
-//		if (cantask_id) {
-//			port_pin_set_output_level(PIN_PA15, false);
-//			port_pin_set_output_level(PIN_PA14, true);
-//		} else {
-//			port_pin_set_output_level(PIN_PA24, false);
-//			port_pin_set_output_level(PIN_PA25, true);
-//		}
-
 
 		/**
 		 * CAN TO UART HANDLING
@@ -200,12 +166,6 @@ void vCanTask(void *pvParameters) {
 		if (can_flags.bus_on) {
 			bool new_can_message = adapt_rx_can_msg(&can_module, &CAN_rx_msg);
 			if (new_can_message) {
-//				c_log('n');
-
-/*				ulog_s("addr: ");
-				xlog((uint8_t *) &CAN_rx_msg.id, 4);
-				ulog_s("\r\n");
-*/
 				// check frame format
 				if (CAN_rx_msg.format == STANDARD_FRAME) {		// Standard Frame
 					if (!CAN_rx_msg.rtr) {
@@ -218,10 +178,11 @@ void vCanTask(void *pvParameters) {
 					CAN_rx_msg.id >>= 1;
 
 					// send high byte of ID
-					if (((CAN_rx_msg.id >> 8) & 0x0F) < 10)
+					if (((CAN_rx_msg.id >> 8) & 0x0F) < 10) {
 						usb_putc((uint8_t) (((CAN_rx_msg.id >> 8) & 0x0F) + 48), cantask_id);
-					else
+					} else {
 						usb_putc((uint8_t) (((CAN_rx_msg.id >> 8) & 0x0F) + 55), cantask_id);
+					}
 					// send low byte of ID
 					usb_byte2ascii((uint8_t) (CAN_rx_msg.id & 0xFF), cantask_id);
 				} else {        								// Extended Frame
@@ -244,13 +205,6 @@ void vCanTask(void *pvParameters) {
 						usb_byte2ascii(CAN_rx_msg.data[can_rxmsg_pos],cantask_id);
 				}
 
-				/*	TODO clarify: TIMESTAMP required at all?
-				// send time stamp if required
-				if (ram_timestamp_status != 0) {
-					usb_byte2ascii((uint8_t) (timestamp >> 8));
-					usb_byte2ascii((uint8_t) timestamp);
-				}
-				 */
 				// send end tag
 				usb_putc(RETURN_CR,cantask_id);
 				usb_send(usart_instance, cantask_id);
@@ -268,20 +222,13 @@ void vCanTask(void *pvParameters) {
 				}
 			}
 		}
-//		if (cantask_id)
-//			port_pin_set_output_level(PIN_PA14, false);
-//		else
-//			port_pin_set_output_level(PIN_PA25, false);
 		flush_clog();
 
-		// TODO zero task delay used for rescheduling, to prevent interference between
+		// zero task delay used for rescheduling, to prevent interference between
 		// simultaneous uart sending of both tasks
 		vTaskDelay(0);
 	}
 }
-
-//#pragma clang diagnostic pop
-
 
 
 /**
@@ -318,45 +265,34 @@ uart_command_return_t exec_uart_cmd(struct can_module *can_module, Can *can_inst
 	}
 	cmd_buf_pntr = cmd_buf;    // reset pointer
 
-//	ulog_s("\r\nBUF: ");
-//	xlog(cmd_buf, cmd_len);
-
-//	c_log('|');
-
 	switch (*cmd_buf_pntr) {
 		case GET_SERIAL:
 			// get serial number
-			c_log('N');
 			return_code = uart_command_get_serial(cantask_id);
 			break;
 
 		case GET_VERSION:
 			// get hard- and software version
-//			c_log('V');
 			return_code = uart_command_get_version(cantask_id);
 			break;
 
 		case GET_SW_VERSION:
 			// get only software version
-			c_log('v');
 			return_code = uart_command_get_sw_version(cantask_id);
 			break;
 
 		case READ_STATUS:
 			// read status flag
-			c_log('F');
 			return_code = uart_command_read_status(can_module, cantask_id, can_flags);
 			break;
 
 		case SET_BITRATE:
 			// set fix bitrate
-			c_log('S');
 			return_code = uart_command_set_bitrate(cmd_len, cmd_buf_pntr, can_bitrate, can_flags);
 			break;
 
 		case OPEN_CAN_CHAN:
 			// open CAN channel
-			c_log('O');
 			return_code = uart_command_open_can_channel(can_module, can_instance, can_bitrate, can_flags);
 			if(return_code != RETURN_ERROR) {
 				port_pin_set_output_level(LEDPIN_C21_GREEN, LED_ACTIVE);
@@ -365,7 +301,6 @@ uart_command_return_t exec_uart_cmd(struct can_module *can_module, Can *can_inst
 
 		case CLOSE_CAN_CHAN:
 			// close CAN channel
-			c_log('C');
 			return_code = uart_command_close_can_channel(can_module, can_flags);
 			if(return_code != RETURN_ERROR) {
 				port_pin_set_output_level(LEDPIN_C21_GREEN, LED_INACTIVE);
@@ -373,7 +308,7 @@ uart_command_return_t exec_uart_cmd(struct can_module *can_module, Can *can_inst
 			break;
 
 		case LISTEN_ONLY:
-			c_log('L');
+			// open CAN channel but listen only
 			return_code = uart_command_listen_only_mode(can_module, can_instance, can_bitrate, can_flags);
 			if(return_code != RETURN_ERROR) {
 				port_pin_set_output_level(LEDPIN_C21_GREEN, LED_ACTIVE);
@@ -382,97 +317,26 @@ uart_command_return_t exec_uart_cmd(struct can_module *can_module, Can *can_inst
 
 		case SEND_R11BIT_ID:
 			// send R11bit ID message
-//			c_log('r');
 			return_code = uart_command_send_r11bit_id(can_module, cmd_len, cmd_buf_pntr, can_flags);
 			break;
 
 		case SEND_11BIT_ID:
 			// send 11bit ID message
-//			c_log('t');
 			return_code = uart_command_send_11bit_id(can_module, cmd_len, cmd_buf_pntr, can_flags);
 			break;
 
 		case SEND_R29BIT_ID:
 			// send R29bit ID message
-//			c_log('R');
 			return_code = uart_command_send_r29bit_id(can_module, cmd_len, cmd_buf_pntr, can_flags);
 			break;
 
 		case SEND_29BIT_ID:
 			// send 29bit ID message
-//			c_log('T');
 			return_code = uart_command_send_29bit_id(can_module, cmd_len, cmd_buf_pntr, can_flags);
 			break;
 
-/*		case SET_AMR:
-			// set AMR
-			c_log('m');
-			//fallthrough to SET_ACR
-
-		case SET_ACR:
-			// set ACR
-			c_log('M');
-			// check valid cmd length and if CAN was initialized before
-			if (cmd_len != 9) {
-				c_log('e');
-				return RETURN_ERROR;
-			}
-			// check if CAN controller is in reset mode
-			if (checkbit(CAN_flags, BUS_ON)) {
-				c_log('e');
-				return RETURN_ERROR;
-			}
-
-			// assign pointer to AMR or ACR values depending on command
-			if (*cmd_buf_pntr == SET_AMR)
-				tmp_pntr = CAN_init_val->amr;
-			else
-				tmp_pntr = CAN_init_val->acr;
-
-			// store AMR or ACR values
-			*tmp_pntr = ascii2byte(++cmd_buf_pntr);
-			*tmp_pntr <<= 4;
-			*(tmp_pntr++) |= ascii2byte(++cmd_buf_pntr);
-			*tmp_pntr = ascii2byte(++cmd_buf_pntr);
-			*tmp_pntr <<= 4;
-			*(tmp_pntr++) |= ascii2byte(++cmd_buf_pntr);
-			*tmp_pntr = ascii2byte(++cmd_buf_pntr);
-			*tmp_pntr <<= 4;
-			*(tmp_pntr++) |= ascii2byte(++cmd_buf_pntr);
-			*tmp_pntr = ascii2byte(++cmd_buf_pntr);
-			*tmp_pntr <<= 4;
-			*tmp_pntr |= ascii2byte(++cmd_buf_pntr);
-			// init CAN controller with new values
-			return reset_can_errorflags(CAN_flags);
-
-		case READ_ECR:
-			// read Error Capture Register
-			c_log('E');
-
-		case READ_ALCR:
-			// read Arbitration Lost Register
-			c_log('A');
-//			ulog_s("read ECR/ALCR");
-			// check if CAN controller is in reset mode
-			if (!can_flags->bus_on)) {
-				c_log('e');
-				return RETURN_ERROR;
-			}
-
-			if (*cmd_buf_pntr == READ_ECR) {
-				usb_putc(READ_ECR,cantask_id);
-				usb_byte2ascii(last_ecr,cantask_id);
-			} else {
-				usb_putc(READ_ALCR,cantask_id);
-				usb_byte2ascii(last_alc,cantask_id);
-			}
-			return RETURN_CR;
-*/
-
 		default:
 			// end with error on unknown commands
-			c_log('u');
-			xlog(cmd_buf_pntr,1);
 			return RETURN_ERROR;
 	}
 	return return_code;
@@ -506,7 +370,6 @@ TaskHandle_t vCreateCanTask(cantask_params *params) {
 		ulog_s("\r\n");
 
 		/* The task was created.  Use the task's handle to delete the task. */
-		//vTaskDelete( xHandle );
 		vTaskSuspend(xHandle);
 		return xHandle;
 	}
