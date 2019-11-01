@@ -47,12 +47,22 @@ bool adapt_rx_can_msg(struct can_module *const can_module, struct CAN_rx_msg_str
 	if (status & CAN_PROTOCOL_ERROR_ARBITRATION) {
 		port_pin_set_output_level(LEDPIN_C21_RED, LED_ACTIVE);
 		can_clear_interrupt_status(can_module, CAN_PROTOCOL_ERROR_ARBITRATION);
-		c_log_s("p1");
+/*		c_log_s("p1");
+		uint32_t prot_status = can_read_protocal_status(can_module);
+		if ((prot_status&0x07) != 0) {
+			c_log(':');
+			c_log((uint8_t) (0x30 + (prot_status & 0x07)));
+		}*/
 	}
 	if (status & CAN_PROTOCOL_ERROR_DATA) {
 		port_pin_set_output_level(LEDPIN_C21_RED, LED_ACTIVE);
 		can_clear_interrupt_status(can_module, CAN_PROTOCOL_ERROR_DATA);
-		c_log_s("p2");
+/*		c_log_s("p2");
+		uint32_t prot_status = can_read_protocal_status(can_module);
+		if ((prot_status&0x07) != 0) {
+			c_log(':');
+			c_log((uint8_t) (0x30 + (prot_status & 0x07)));
+		}*/
 	}
 
 	// fifo0 is used for standard messages
@@ -69,11 +79,6 @@ bool adapt_rx_can_msg(struct can_module *const can_module, struct CAN_rx_msg_str
 		// fifo full flag is set
 		if(fifo0_status & CAN_RXF0S_F0F){
 			ulog_s("FIFO full!F0\r\n");
-			ulog_s("level: ");
-			xlog(&fifo0_fill_level, 1);
-			ulog_s("\r\nindex pos: ");
-			xlog(&fifo0_getindex, 1);
-			ulog_s("\r\n");
 			port_pin_set_output_level(LEDPIN_C21_RED, LED_ACTIVE);
 		}
 
