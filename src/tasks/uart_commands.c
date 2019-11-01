@@ -7,6 +7,7 @@
 #include "usb.h"
 #include "slcan.h"
 #include "uart_commands.h"
+#include "can_methods.h"
 
 
 //TODO move to helper file?
@@ -35,33 +36,12 @@ void setup_can_instance(struct can_module *can_module, Can *can_hw, uint32_t bit
 	config_can.run_in_standby = true;
 	config_can.automatic_retransmission = false;
 
-	// make sure that the hw is off.
-//	can_stop(can_module);
-
 	//setup the hw
 	can_init(can_module, can_hw, &config_can);
 
-/*	ulog_s("\r\nNBTP reg: ");
-	xlog_long((const uint32_t *) &can_hw->NBTP.reg);
-
-
-	ulog_s("\r\nGCLK reg: ");
-	xlog_long((const uint32_t *) &GCLK->GENCTRL[8].reg);
-*/
 	// change bitrate
 	can_set_baudrate(can_hw, bitrate);
-/*
-	ulog_s("\r\nGCLK reg: ");
-	xlog_long((const uint32_t *) &GCLK->GENCTRL[8].reg);
 
-	uint32_t tmp = system_gclk_chan_get_hz(CAN0_GCLK_ID);
-
-	ulog_s("\r\nclk spd : ");
-	xlog_long((const uint32_t *) &tmp);
-	ulog_s("\r\nNBTP reg: ");
-	xlog_long((const uint32_t *) &can_hw->NBTP.reg);
-
-*/
 	// start hw
 	can_start(can_module);
 }
@@ -74,17 +54,14 @@ uint8_t transmit_CAN(struct can_module *const can_module, struct can_tx_element 
 	if (!(fifo_status->bit.TFQF + 0)) {
 		status = can_set_tx_buffer_element(can_module, tx_element, fifo_put_index);
 		if (status != STATUS_OK) {
-			c_log_s("E1");
 			return RETURN_ERROR;
 		}
 		status = can_tx_transfer_request(can_module, 1u << fifo_put_index);
 		if (status != STATUS_OK) {
-			c_log_s("E2");
 			return RETURN_ERROR;
 		}
 		return NO_RETURN;
 	} else {
-//		c_log_s("E3");
 		return ERROR_BUSY;
 	}
 
@@ -134,7 +111,6 @@ uart_command_return_t uart_command_read_status(struct can_module *can_module, ui
 		flags |= (status & CAN_PSR_EW) ? (1 << 2) : 0;
 		flags |= (status & CAN_PSR_EP) ? (1 << 5) : 0;
 		flags |= (can_module->hw->RXF0S.bit.RF0L || can_module->hw->RXF1S.bit.RF1L) ? (1 << 3) : 0;
-//		flags |= (status & CAN_PSR_LEC_Msk) ? (1 << 7) : 0;
 		if((status & CAN_PSR_LEC_Msk) && (status & CAN_PSR_LEC_Msk) != 0x7) {
 			flags |= (1 << 7);
 		}
@@ -144,12 +120,10 @@ uart_command_return_t uart_command_read_status(struct can_module *can_module, ui
 	reset_can_errorflags(can_flags);
 
 	if (!usb_putc(READ_STATUS,cantask_id)) {
-		c_log_s("F1");
 		return ERROR_BUSY;
 	}
 
 	if (!usb_byte2ascii((uint8_t) flags,cantask_id)) {
-		c_log_s("F2");
 		return ERROR_BUSY;
 	}
 	return RETURN_CR;
@@ -159,21 +133,16 @@ uart_command_return_t uart_command_read_status(struct can_module *can_module, ui
 uart_command_return_t uart_command_set_bitrate(uint8_t cmd_len, uint8_t *cmd_buf_pntr, uint32_t *can_bitrate, can_flags_t *can_flags) {
 	// check if CAN controller is in reset mode
 	if (can_flags->bus_on) {
-		c_log('e');
 		return RETURN_ERROR;
 	}
 
-//			ulog_s("\r\ncmd_len: ");
-//			xlog(&cmd_len, 1);
 	if ((cmd_len != 5) && (cmd_len != 2)) {
-		c_log('e');
 		return RETURN_ERROR;    // check valid cmd length
 	}
 	uint8_t value = (uint8_t) (*(++cmd_buf_pntr) - 0x30);
 
 	// check if value is in bound of array
 	if (value > 8) {
-		c_log('e');
 		return RETURN_ERROR;
 	}
 
@@ -189,13 +158,11 @@ uart_command_return_t uart_command_set_bitrate(uint8_t cmd_len, uint8_t *cmd_buf
 uart_command_return_t uart_command_open_can_channel(struct can_module *can_module, Can *can_instance, uint32_t *can_bitrate, can_flags_t *can_flags) {
 	// return error if controller is not initialized
 	if (!can_flags->init_complete) {
-		c_log_s("e1");
 		return RETURN_ERROR;
 	}
 
 	// check if CAN controller is in reset mode
 	if (can_flags->bus_on) {
-		c_log_s("e2");
 		return RETURN_ERROR;
 	}
 
@@ -207,7 +174,6 @@ uart_command_return_t uart_command_open_can_channel(struct can_module *can_modul
 
 uart_command_return_t uart_command_close_can_channel(struct can_module *can_module, can_flags_t *can_flags) {
 	if (!can_flags->bus_on) {
-		c_log('e');
 		return RETURN_ERROR;
 	}
 	can_stop(can_module);
@@ -220,13 +186,11 @@ uart_command_return_t uart_command_close_can_channel(struct can_module *can_modu
 uart_command_return_t uart_command_listen_only_mode(struct can_module *can_module, Can *can_instance, uint32_t *can_bitrate, can_flags_t *can_flags) {
 	// return error if controller is not initialized or already open
 	if (!can_flags->init_complete) {
-		c_log('e');
 		return RETURN_ERROR;
 	}
 
 	// check if CAN controller is in reset mode
 	if (can_flags->bus_on) {
-		c_log('e');
 		return RETURN_ERROR;
 	}
 
@@ -242,12 +206,10 @@ uart_command_return_t uart_command_send_r11bit_id(struct can_module *can_module,
 
 	// check if CAN controller is in reset mode or busy
 	if (!can_flags->bus_on || can_flags->tx_busy) {
-//		c_log('e');
 		return RETURN_ERROR;
 	}
 	// check valid cmd length (only 5 bytes for RTR)
 	if (cmd_len != 5) {
-//		c_log('e');
 		return RETURN_ERROR;
 	}
 
@@ -275,13 +237,11 @@ uart_command_return_t uart_command_send_11bit_id(struct can_module *can_module, 
 
 	// check if CAN controller is in reset mode or busy
 	if (!can_flags->bus_on || can_flags->tx_busy) {
-		c_log_s("e1");
 		return RETURN_ERROR;
 	}
 
 
 	if ((cmd_len < 5) || (cmd_len > 21)) {
-		c_log_s("e2");
 		return RETURN_ERROR;    // check valid cmd length
 	}
 
@@ -326,12 +286,10 @@ uart_command_return_t uart_command_send_r29bit_id(struct can_module *can_module,
 
 	// check if CAN controller is in reset mode or busy
 	if (!can_flags->bus_on || can_flags->tx_busy) {
-		c_log('e');
 		return RETURN_ERROR;
 	}
 
 	if (cmd_len != 10) {
-		c_log('e');
 		return RETURN_ERROR;    // check valid cmd length
 	}
 
@@ -370,12 +328,10 @@ uart_command_return_t uart_command_send_29bit_id(struct can_module *can_module, 
 
 	// check if CAN controller is in reset mode or busy
 	if (!can_flags->bus_on || can_flags->tx_busy) {
-		c_log_s("e1");
 		return RETURN_ERROR;
 	}
 
 	if ((cmd_len < 10) || (cmd_len > 26)) {
-		c_log_s("e2");
 		return RETURN_ERROR;    // check valid cmd length
 	}
 	can_get_tx_buffer_element_defaults(&tx_element);
@@ -405,13 +361,11 @@ uart_command_return_t uart_command_send_29bit_id(struct can_module *can_module, 
 
 	// check number of data bytes supplied against data lenght byte
 	if (tx_element.T1.bit.DLC != ((cmd_len - 10) / 2)) {
-		c_log_s("e3");
 		return RETURN_ERROR;
 	}
 
 	// check for valid length
 	if (tx_element.T1.bit.DLC > 8) {
-		c_log_s("e4");
 		return RETURN_ERROR;
 	} else { // store data
 		for (uint8_t i = 0; i < tx_element.T1.bit.DLC; i++) {
