@@ -82,8 +82,6 @@ inline static void write_byte_to_wire(uint8_t byte, uint8_t pin) {
 }
 
 inline static void usart_read_callback(struct usart_module *const usart_module, uint8_t cantask_id) {
-//	port_pin_set_output_level(PIN_PA19, true);
-//	port_pin_set_output_level(PIN_PA20, false);
 	volatile usart_buf_t *buf;
 	if (cantask_id == CANTASK_ID_0) {
 		buf = usart_buf_can0;
@@ -96,18 +94,12 @@ inline static void usart_read_callback(struct usart_module *const usart_module, 
 	if((buf->usart_buf_rx[buf->fill_rx][buf->rx_insert_pos]) == CR){
 		taskENTER_CRITICAL();
 		buf->usart_buf_rx[buf->fill_rx][buf->rx_insert_pos] = 0; // remove CR from receive buffer!
-//		write_byte_to_wire((uint8_t) buf->fill_rx, PIN_PA20);
-//		write_byte_to_wire((uint8_t) buf->rx_pending_map, PIN_PA20);
 		buf->rx_pending_map |=  (1 << buf->fill_rx);
-//		write_byte_to_wire((uint8_t) buf->rx_pending_map, PIN_PA20);
 		buf->rx_fill_level++;
-//		write_byte_to_wire((uint8_t) buf->rx_fill_level, PIN_PA20);
-//		if (buf->rx_pending_map & (1 << ((buf->fill_rx + 1) % USB_CMD_BUF_COUNT))) {
 		if (((buf->fill_rx + 1) % USB_CMD_RX_BUF_COUNT) == buf->read_rx) {
 			//if this happens the commands are not processed fast enough and to prevent overwriting the last stored
 			//command we are now disabling receiving!
 			buf->rx_buf_overrun = true;
-//			port_pin_set_output_level(PIN_PA14, true);
 		}
 		buf->fill_rx = (uint8_t) ((buf->fill_rx + 1) % USB_CMD_RX_BUF_COUNT);
 		buf->rx_insert_pos = -1;
@@ -115,10 +107,8 @@ inline static void usart_read_callback(struct usart_module *const usart_module, 
 	}
 	buf->rx_insert_pos = (uint8_t) ((buf->rx_insert_pos + 1) % USB_CMD_BUF_SIZE);
 	if (!buf->rx_buf_overrun) {
-//		port_pin_set_output_level(PIN_PA20, true);
 		usart_read_job(usart_module, (uint16_t *) &(buf->usart_buf_rx[buf->fill_rx][buf->rx_insert_pos]));
 	}
-//	port_pin_set_output_level(PIN_PA19, false);
 }
 
 void usart_read_callback_cantask0(struct usart_module *const usart_module) {
@@ -141,10 +131,6 @@ inline static void usart_write_callback(struct usart_module *const usart_module,
 		return;
 	}
 	if(buf->tx_pending_map){
-//		ulog_s(" map: ");
-//		xlog( (uint8_t *) &buf->tx_pending_map, 1);
-//		ulog_s(" read: ");
-//		xlog( (uint8_t *) &buf->read_tx, 1);
 		taskENTER_CRITICAL();
 		enum status_code result = usart_write_buffer_job(usart_module, (uint8_t *) &(buf->usart_buf_tx[buf->read_tx][0]), (uint16_t) (buf->buf_tx_len[buf->read_tx]));
 		if (result == STATUS_OK) {
@@ -199,62 +185,12 @@ enum_usb_return_t get_complete_cmd(uint8_t **cmd_buf, uint32_t *buf_num, uint8_t
 	if (buf == NULL) {
 		return USB_ERROR;
 	}
-//	ulog_s("\r\nmap: ");
-//	xlog((uint8_t *) &buf->rx_pending_map, 1);
-//	ulog_s(" fill: ");
-//	xlog(&buf->fill_rx, 1);
-//	ulog_s(" read: ");
-//	xlog(&buf->read_rx, 1);
-//	taskENTER_CRITICAL();
-//	if (buf->rx_pending_map & (1 << buf->read_rx)) {
+
 	if (buf->read_rx != buf->fill_rx || buf->rx_buf_overrun) {
-//		uint8_t pos = buf->read_rx;
 		*cmd_buf = (uint8_t *) buf->usart_buf_rx[buf->read_rx];
 		*buf_num = buf->read_rx;
-
-//		ulog_s("\r\nBUF0: ");
-//		xlog(buf->usart_buf_rx[0], CMD_BUFFER_LENGTH);
-//		ulog_s("\r\nBUF1: ");
-//		xlog(buf->usart_buf_rx[1], CMD_BUFFER_LENGTH);
-//		c_log('n');
-
-//		if (buf->buf_overrun) {
-//			port_pin_set_output_level(PIN_PA14, false);
-			/*
-			 * if we had an possible overflow in the next rx buffer row, the uart read callback
-			 * has not started a new reading. But we now have cleared one buffer entry so a new
-			 * reading from uart can be started!
-			*/
-//			if (usart_read_job(usart_module, (uint16_t *) &(buf->usart_buf_rx[buf->fill_rx][buf->rx_insert_pos])) != STATUS_OK) {
-//				ulog_s("\r\nrestart after buf_overrun failed!");
-//			}
-//			buf->buf_overrun = false;
-//			result = BUF_OVERRUN;
-//		} else {
-			result = NEW_CMD;
-//		}
+		result = NEW_CMD;
 	}
-
-/*	if (buf->buf_overrun) {
-		ulog_s("\r\nmap: ");
-		xlog((uint8_t *) &buf->rx_pending_map, 1);
-		ulog_s(" fill: ");
-		xlog((uint8_t*)&buf->fill_rx, 1);
-		ulog_s(" read: ");
-		xlog((uint8_t*)&buf->read_rx, 1);
-		ulog_s(" levl: ");
-		xlog((uint8_t*)&buf->rx_fill_level, 1);
-		for (uint8_t i = 0; i < USB_CMD_BUF_COUNT; i++) {
-			ulog_s("\r\nBUF");
-			uint8_t tmp = (uint8_t) (i+0x30);
-			ulog(&tmp,1);
-			ulog_s(": ");
-			xlog((uint8_t*) buf->usart_buf_rx[i], CMD_BUFFER_LENGTH);
-		}
-		result = BUF_OVERRUN;
-	}
-*/
-//	taskEXIT_CRITICAL();
 	return result;
 }
 
@@ -268,8 +204,6 @@ bool clear_cmd_buf(usart_module_t *usart_module, uint8_t cantask_id, uint32_t bu
 	if (buf == NULL) {
 		return false;
 	}
-//	ulog_s(" clear: ");
-//	xlog((uint8_t *) &buf_num,1);
 	if (buf_num < USB_CMD_RX_BUF_COUNT) {
 		taskENTER_CRITICAL();
 		memset((void *) buf->usart_buf_rx[buf_num], 0x00, USB_CMD_BUF_SIZE);
@@ -277,19 +211,13 @@ bool clear_cmd_buf(usart_module_t *usart_module, uint8_t cantask_id, uint32_t bu
 		buf->rx_fill_level--;
 		buf->read_rx = (uint8_t) ((buf->read_rx + 1) % USB_CMD_RX_BUF_COUNT);
 
-//		buf->rx_pending_map = 0;
-//		for (uint32_t i = 0; i < USB_CMD_BUF_COUNT; i++) {
-//			memset(buf->usart_buf_rx[i], 0x00, USB_CMD_BUF_SIZE);
-//		}
+
 		if (buf->rx_buf_overrun) {
-//			port_pin_set_output_level(PIN_PA14, false);
-//			ulog_s(" ovr ");
 			/*
 			 * if we had an possible overflow in the next rx buffer row, the uart read callback
 			 * has not started a new reading. But we now have cleared one buffer entry so a new
 			 * reading from uart can be started!
 			*/
-//			port_pin_set_output_level(PIN_PA20, true);
 			if(usart_read_job(usart_module, (uint16_t *) &(buf->usart_buf_rx[buf->fill_rx][buf->rx_insert_pos])) != STATUS_OK) {
 				ulog_s("\r\nrestart after buf_overrun failed!");
 			}
@@ -373,7 +301,6 @@ enum status_code usb_send(usart_module_t *module, uint8_t cantask_id) {
 	if (buf->tx_insert_pos > 0){
 		buf->buf_tx_len[buf->fill_tx] = buf->tx_insert_pos;
 		if (((buf->fill_tx + 1) % USB_CMD_TX_BUF_COUNT) == buf->read_tx) {
-//		if (buf->tx_pending_map & ((buf->fill_tx + 1) % USB_CMD_BUF_COUNT)) {
 			//if this happens the commands are not processed fast enough and we are now starting to overwrite the last stored command!
 			buf->tx_buf_overrun = true;
 			result = STATUS_ERR_OVERFLOW;
