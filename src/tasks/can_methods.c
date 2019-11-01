@@ -160,15 +160,23 @@ void setup_can_instance(struct can_module *can_module, Can *can_hw, uint32_t bit
 
 // send can message
 uint8_t transmit_CAN(struct can_module *const can_module, struct can_tx_element *tx_element) {
-	volatile CAN_TXFQS_Type *fifo_status = (CAN_TXFQS_Type *) &(can_module->hw->TXFQS);
-	uint32_t  fifo_put_index = fifo_status->bit.TFQPI + 0;
+	uint32_t tx_fifo_status = can_tx_get_fifo_queue_status(can_module);
+	//extract fifo put index
+	uint32_t  tx_fifo_put_index = (uint32_t) ((tx_fifo_status & CAN_TXFQS_TFQPI_Msk) >> CAN_TXFQS_TFQPI_Pos);
 	enum status_code status;
-	if (!(fifo_status->bit.TFQF + 0)) {
-		status = can_set_tx_buffer_element(can_module, tx_element, fifo_put_index);
+
+#if (CONF_CAN0_TX_FIFO_QUEUE_NUM > 1)
+	// check if the fifo is not marked as full
+	if (!(tx_fifo_status & CAN_TXFQS_TFQF_Pos)) {
+#else
+	// check if the index is currently marked as trasmit pending
+	if (!(can_tx_get_pending_status(can_module) & (1 << tx_fifo_put_index))) {
+#endif
+		status = can_set_tx_buffer_element(can_module, tx_element, tx_fifo_put_index);
 		if (status != STATUS_OK) {
 			return RETURN_ERROR;
 		}
-		status = can_tx_transfer_request(can_module, 1u << fifo_put_index);
+		status = can_tx_transfer_request(can_module, 1u << tx_fifo_put_index);
 		if (status != STATUS_OK) {
 			return RETURN_ERROR;
 		}
