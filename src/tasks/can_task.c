@@ -11,30 +11,15 @@
 #include "slcan.h"
 #include "uart_commands.h"
 
-// TODO END
-
-#define STANDARD_FRAME 0
-#define EXTENDED_FRAME 1
-
-// CAN rx message
-struct CAN_rx_msg_struct{
-	uint8_t format;        // Extended/Standard Frame
-	uint32_t id;            // Frame ID
-	uint8_t rtr;            // RTR/Data Frame
-	uint8_t len;            // Data Length
-	uint8_t data[8];        // Data Bytes
-};                  // length 15 byte/each
-
 /*
  * Prototypes
  */
 void vCanTask(void *pvParameters);
 uart_command_return_t exec_uart_cmd(struct can_module *can_module, Can *can_instance, uint8_t *cmd_buf, can_flags_t *can_flags, uint8_t cantask_id, uint32_t *can_bitrate);
-bool adapt_rx_can_msg(struct can_module *const can_module, struct CAN_rx_msg_struct *CAN_rx_msg);
-void setup_can_instance(struct can_module *can_module, Can *can_hw, uint32_t bitrate);
+bool check_and_transfer_can_message_to_uart(struct can_module *const can_module, struct can_rx_element_fifo_0 *rx_message, uint8_t cantask_id, uint8_t *sequence_counter);
 
 
-bool adapt_rx_can_msg(struct can_module *const can_module, struct CAN_rx_msg_struct *CAN_rx_msg) {
+bool check_and_transfer_can_message_to_uart(struct can_module *const can_module, struct can_rx_element_fifo_0 *rx_message, uint8_t cantask_id, uint8_t *sequence_counter) {
 	bool messsage_read = false;
 	//FIFO buffers status
 	uint32_t fifo0_status = can_rx_get_fifo_status(can_module, 0);
@@ -65,10 +50,9 @@ bool adapt_rx_can_msg(struct can_module *const can_module, struct CAN_rx_msg_str
 		}*/
 	}
 
-	// fifo0 is used for standard messages
+	// read element from fifo0 (standard and extended frames)
 	if(fifo0_fill_level) {
 		uint8_t fifo0_getindex = (uint8_t) ((fifo0_status & CAN_RXF0S_F0GI_Msk) >> CAN_RXF0S_F0GI_Pos); //returns the current index of the receive buffer
-		struct can_rx_element_fifo_0 rx_element_fifo_0;
 
 		// lost a message flag is set
 		if(fifo0_status & CAN_RXF0S_RF0L){
@@ -82,20 +66,69 @@ bool adapt_rx_can_msg(struct can_module *const can_module, struct CAN_rx_msg_str
 			port_pin_set_output_level(LEDPIN_C21_RED, LED_ACTIVE);
 		}
 
-		if (can_get_rx_fifo_0_element(can_module, &rx_element_fifo_0, fifo0_getindex) == STATUS_OK) {
-			if (rx_element_fifo_0.R0.bit.XTD) {
-				CAN_rx_msg->format = EXTENDED_FRAME;
-				CAN_rx_msg->id = (uint32_t) (rx_element_fifo_0.R0.bit.ID & CAN_RX_ELEMENT_R0_ID_Msk);
+		if (can_get_rx_fifo_0_element(can_module, rx_message, fifo0_getindex) == STATUS_OK) {
+			uint32_t can_id = 0;
+			if (rx_message->R0.bit.XTD) {
+				if (!rx_message->R0.bit.RTR) {
+					usb_putc(SEND_29BIT_ID, cantask_id);	// can message with 29bit ID
+				} else {
+					usb_putc(SEND_R29BIT_ID, cantask_id);	// remote message with 29bit ID
+				}
+
+				// send ID bytes
+				can_id = (uint32_t) (rx_message->R0.bit.ID & CAN_RX_ELEMENT_R0_ID_Msk);
+				usb_byte2ascii((uint8_t) ((can_id >> 24) & 0xFF), cantask_id);
+				usb_byte2ascii((uint8_t) ((can_id >> 16) & 0xFF), cantask_id);
+				usb_byte2ascii((uint8_t) ((can_id >> 8) & 0xFF), cantask_id);
+				usb_byte2ascii((uint8_t) (can_id & 0xFF), cantask_id);
+
 			} else {
-				CAN_rx_msg->format = STANDARD_FRAME;
-				CAN_rx_msg->id = rx_element_fifo_0.R0.bit.ID & 0x7FF;
+				if (!rx_message->R0.bit.RTR) {
+					usb_putc(SEND_11BIT_ID, cantask_id);	// can message with 11bit ID
+				} else {
+					usb_putc(SEND_R11BIT_ID, cantask_id);	// remote message with 11bit ID
+				}
+
+				can_id = rx_message->R0.bit.ID & 0x7FF;
+
+				//TODO remove hack, needed to get the same address on standard and extended frames! Check if that is expected or not!
+				can_id >>= 1;
+
+				// send high byte of ID
+				if (((can_id >> 8) & 0x0F) < 10) {
+					usb_putc((uint8_t) (((can_id >> 8) & 0x0F) + 48), cantask_id);
+				} else {
+					usb_putc((uint8_t) (((can_id >> 8) & 0x0F) + 55), cantask_id);
+				}
+				// send low byte of ID
+				usb_byte2ascii((uint8_t) (can_id & 0xFF), cantask_id);
 			}
 
-			CAN_rx_msg->rtr = (uint8_t) rx_element_fifo_0.R0.bit.RTR;
-			CAN_rx_msg->len = (uint8_t) (rx_element_fifo_0.R1.bit.DLC + 0);
-			memcpy(CAN_rx_msg->data, rx_element_fifo_0.data, CAN_rx_msg->len);
-			messsage_read = true;
+			// send data length code
+			usb_putc((uint8_t) ((rx_message->R1.bit.DLC + 0) + '0'), cantask_id);
+			if (!rx_message->R0.bit.RTR) {	// send data only if no remote frame request
+				// send data bytes
+				for (uint8_t can_rxmsg_pos = 0; can_rxmsg_pos < (rx_message->R1.bit.DLC + 0); can_rxmsg_pos++)
+					usb_byte2ascii(rx_message->data[can_rxmsg_pos],cantask_id);
+			}
+			// send end tag
+			usb_putc(RETURN_CR, cantask_id);
+
+			//DEBUG can-sequence checker!
+			if (can_id == 4) {
+				if (rx_message->data[0] != *sequence_counter) {
+					// we have a missmatch!
+					port_pin_set_output_level(PIN_PA14, true);
+					*sequence_counter = rx_message->data[0];
+					port_pin_set_output_level(PIN_PA14, false);
+				}
+				// setup counter for next expected sequence number
+				(*sequence_counter)++;
+			}
+
+			//acknowledge the message in the can fifo
 			can_rx_fifo_acknowledge(can_module, 0, fifo0_getindex);
+			messsage_read = true;
 		}
 
 	}
@@ -115,7 +148,7 @@ void vCanTask(void *pvParameters) {
 	// CAN status flags
 	can_flags_t can_flags = {.bus_on = false, .init_complete = false, .tx_busy = false};
 
-	//task parameters (uart+can instances, task id)
+	// task parameters (uart+can instances, task id)
 	cantask_params *params = (cantask_params *) pvParameters;
 	Can *can_instance = params->can_instance;
 
@@ -130,13 +163,13 @@ void vCanTask(void *pvParameters) {
 	usart_buf_t usart_buf;
 
 
-	//initially both LEDs off
+	// initially both LEDs off
 	port_pin_set_output_level(LEDPIN_C21_GREEN, LED_INACTIVE);
 	port_pin_set_output_level(LEDPIN_C21_RED, LED_INACTIVE);
 
 	configure_usart_callbacks(usart_instance, cantask_id);
 
-	struct CAN_rx_msg_struct CAN_rx_msg;
+	struct can_rx_element_fifo_0 rx_message;
 
 	start_canbus_usart(usart_instance, &usart_buf, cantask_id);
 
@@ -146,13 +179,13 @@ void vCanTask(void *pvParameters) {
 	ulog_s("...\r\n");
 
 	uint8_t sequence_counter = 0;
+	uint32_t buf_num = 0;
+	uint8_t *buf = NULL;
 
 	for (;;) {
 		/**
 		 * UART TO CAN HANDLING
 		 */
-		uint32_t buf_num = 0;
-		uint8_t *buf = NULL;
 		enum_usb_return_t new_cmd_available = get_complete_cmd(&buf, &buf_num, cantask_id);
 		if (new_cmd_available == NEW_CMD || new_cmd_available == BUF_OVERRUN) {
 			// Execute USB command and return status to terminal
@@ -173,62 +206,9 @@ void vCanTask(void *pvParameters) {
 		 * CAN TO UART HANDLING
 		 */
 		if (can_flags.bus_on) {
-			bool new_can_message = adapt_rx_can_msg(&can_module, &CAN_rx_msg);
+			bool new_can_message = check_and_transfer_can_message_to_uart(&can_module, &rx_message, cantask_id, &sequence_counter);
 			if (new_can_message) {
-				// check frame format
-				if (CAN_rx_msg.format == STANDARD_FRAME) {		// Standard Frame
-					if (!CAN_rx_msg.rtr) {
-						usb_putc(SEND_11BIT_ID, cantask_id);	// can message with 11bit ID
-					} else {
-						usb_putc(SEND_R11BIT_ID, cantask_id);	// remote message with 11bit ID
-					}
-
-					//TODO remove hack, needed to get the same address on standard and extended frames!
-					CAN_rx_msg.id >>= 1;
-
-					// send high byte of ID
-					if (((CAN_rx_msg.id >> 8) & 0x0F) < 10) {
-						usb_putc((uint8_t) (((CAN_rx_msg.id >> 8) & 0x0F) + 48), cantask_id);
-					} else {
-						usb_putc((uint8_t) (((CAN_rx_msg.id >> 8) & 0x0F) + 55), cantask_id);
-					}
-					// send low byte of ID
-					usb_byte2ascii((uint8_t) (CAN_rx_msg.id & 0xFF), cantask_id);
-				} else {        								// Extended Frame
-					if (!CAN_rx_msg.rtr) {
-						usb_putc(SEND_29BIT_ID, cantask_id);	// can message with 29bit ID
-					} else {
-						usb_putc(SEND_R29BIT_ID, cantask_id);	// remote message with 29bit ID
-					}
-					// send ID bytes
-					usb_byte2ascii((uint8_t) ((CAN_rx_msg.id >> 24) & 0xFF), cantask_id);
-					usb_byte2ascii((uint8_t) ((CAN_rx_msg.id >> 16) & 0xFF), cantask_id);
-					usb_byte2ascii((uint8_t) ((CAN_rx_msg.id >> 8) & 0xFF), cantask_id);
-					usb_byte2ascii((uint8_t) (CAN_rx_msg.id & 0xFF), cantask_id);
-				}
-				// send data length code
-				usb_putc((uint8_t) (CAN_rx_msg.len + '0'), cantask_id);
-				if (!CAN_rx_msg.rtr) {	// send data only if no remote frame request
-					// send data bytes
-					for (uint8_t can_rxmsg_pos = 0; can_rxmsg_pos < CAN_rx_msg.len; can_rxmsg_pos++)
-						usb_byte2ascii(CAN_rx_msg.data[can_rxmsg_pos],cantask_id);
-				}
-
-				// send end tag
-				usb_putc(RETURN_CR,cantask_id);
 				usb_send(usart_instance, cantask_id);
-
-				//DEBUG can-sequence checker!
-				if (CAN_rx_msg.id == 4) {
-					if (CAN_rx_msg.data[0] != sequence_counter) {
-						// we have a missmatch!
-						port_pin_set_output_level(PIN_PA14, true);
-						sequence_counter = CAN_rx_msg.data[0];
-						port_pin_set_output_level(PIN_PA14, false);
-					}
-					// setup counter for next expected sequence number
-					sequence_counter++;
-				}
 			}
 		}
 		flush_clog();
@@ -350,6 +330,7 @@ uart_command_return_t exec_uart_cmd(struct can_module *can_module, Can *can_inst
 	}
 	return return_code;
 }
+
 
 TaskHandle_t vCreateCanTask(cantask_params *params) {
 
