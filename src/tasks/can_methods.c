@@ -14,10 +14,10 @@
 bool check_and_transfer_can_message_to_uart(struct can_module *const can_module, struct can_rx_element_fifo_0 *rx_message, uint8_t cantask_id, uint8_t *sequence_counter) {
 	bool messsage_read = false;
 	//FIFO buffers status
-	uint32_t fifo0_status = can_rx_get_fifo_status(can_module, 0);
+	uint32_t rx_fifo_status = can_rx_get_fifo_status(can_module, 0);
 
 	//FIFO buffers fill level
-	uint8_t fifo0_fill_level = (uint8_t) (fifo0_status & CAN_RXF0S_F0FL_Msk);
+	uint8_t rx_fifo_fill_level = (uint8_t) (rx_fifo_status & CAN_RXF0S_F0FL_Msk);
 
 	// check for errors
 	volatile uint32_t status = can_read_interrupt_status(can_module);
@@ -43,22 +43,22 @@ bool check_and_transfer_can_message_to_uart(struct can_module *const can_module,
 	}
 
 	// read element from fifo0 (standard and extended frames)
-	if(fifo0_fill_level) {
-		uint8_t fifo0_getindex = (uint8_t) ((fifo0_status & CAN_RXF0S_F0GI_Msk) >> CAN_RXF0S_F0GI_Pos); //returns the current index of the receive buffer
+	if(rx_fifo_fill_level) {
+		uint8_t fifo_getindex = (uint8_t) ((rx_fifo_status & CAN_RXF0S_F0GI_Msk) >> CAN_RXF0S_F0GI_Pos); //returns the current index of the receive buffer
 
 		// lost a message flag is set
-		if(fifo0_status & CAN_RXF0S_RF0L){
+		if(rx_fifo_status & CAN_RXF0S_RF0L){
 			ulog_s("message lost!F0\r\n");
 			port_pin_set_output_level(LEDPIN_C21_RED, LED_ACTIVE);
 		}
 
 		// fifo full flag is set
-		if(fifo0_status & CAN_RXF0S_F0F){
+		if(rx_fifo_status & CAN_RXF0S_F0F){
 			ulog_s("FIFO full!F0\r\n");
 			port_pin_set_output_level(LEDPIN_C21_RED, LED_ACTIVE);
 		}
 
-		if (can_get_rx_fifo_0_element(can_module, rx_message, fifo0_getindex) == STATUS_OK) {
+		if (can_get_rx_fifo_0_element(can_module, rx_message, fifo_getindex) == STATUS_OK) {
 			uint32_t can_id = 0;
 			if (rx_message->R0.bit.XTD) {
 				if (!rx_message->R0.bit.RTR) {
@@ -119,7 +119,7 @@ bool check_and_transfer_can_message_to_uart(struct can_module *const can_module,
 			}
 
 			//acknowledge the message in the can fifo
-			can_rx_fifo_acknowledge(can_module, 0, fifo0_getindex);
+			can_rx_fifo_acknowledge(can_module, 0, fifo_getindex);
 			messsage_read = true;
 		}
 
