@@ -5,6 +5,7 @@
 #ifndef SAMC_FREERTOS_UART_COMMANDS_H
 #define SAMC_FREERTOS_UART_COMMANDS_H
 
+#include "can_methods.h"
 
 //TODO these values are chosen arbitrarily, set appropriate values
 #define HW_VER        0x30		// hardware version
@@ -19,12 +20,6 @@ typedef enum {
 	RETURN_CR = 13,
 	ERROR_BUSY = 128
 } uart_command_return_t;
-
-typedef struct {
-	uint16_t init_complete:1;
-	uint16_t bus_on:1;
-	uint16_t tx_busy:1;
-} can_flags_t;
 
 // can control/setting commands
 uart_command_return_t uart_command_get_serial(uint8_t cantask_id);

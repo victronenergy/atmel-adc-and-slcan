@@ -7,68 +7,6 @@
 #include "usb.h"
 #include "slcan.h"
 #include "uart_methods.h"
-#include "can_methods.h"
-
-
-//TODO move to helper file?
-
-void reset_can_errorflags(can_flags_t *CAN_flags);
-void setup_can_instance(struct can_module *can_module, Can *can_hw, uint32_t bitrate);
-uint8_t transmit_CAN(struct can_module *const can_module, struct can_tx_element *tx_element);
-
-void reset_can_errorflags(can_flags_t *CAN_flags) {
-	//currently just the led
-	port_pin_set_output_level(LEDPIN_C21_RED, LED_INACTIVE);
-}
-
-// setup CAN interface
-void setup_can_instance(struct can_module *can_module, Can *can_hw, uint32_t bitrate){
-
-	/* Initialize the module. */
-	struct can_config config_can;
-	can_get_config_defaults(&config_can);
-
-	config_can.nonmatching_frames_action_standard = CAN_NONMATCHING_FRAMES_FIFO_0;
-	config_can.nonmatching_frames_action_extended = CAN_NONMATCHING_FRAMES_FIFO_0;
-	config_can.remote_frames_standard_reject = false;
-	config_can.remote_frames_extended_reject = false;
-	config_can.extended_id_mask = 0x00000000;
-	config_can.run_in_standby = true;
-	config_can.automatic_retransmission = false;
-
-	//setup the hw
-	can_init(can_module, can_hw, &config_can);
-
-	// change bitrate
-	can_set_baudrate(can_hw, bitrate);
-
-	// start hw
-	can_start(can_module);
-}
-
-// send can message
-uint8_t transmit_CAN(struct can_module *const can_module, struct can_tx_element *tx_element) {
-	volatile CAN_TXFQS_Type *fifo_status = (CAN_TXFQS_Type *) &(can_module->hw->TXFQS);
-	uint32_t  fifo_put_index = fifo_status->bit.TFQPI + 0;
-	enum status_code status;
-	if (!(fifo_status->bit.TFQF + 0)) {
-		status = can_set_tx_buffer_element(can_module, tx_element, fifo_put_index);
-		if (status != STATUS_OK) {
-			return RETURN_ERROR;
-		}
-		status = can_tx_transfer_request(can_module, 1u << fifo_put_index);
-		if (status != STATUS_OK) {
-			return RETURN_ERROR;
-		}
-		return NO_RETURN;
-	} else {
-		return ERROR_BUSY;
-	}
-
-}
-//end TODO
-
-
 
 
 uart_command_return_t uart_command_get_serial(uint8_t cantask_id) {
