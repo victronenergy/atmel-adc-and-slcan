@@ -7,6 +7,7 @@
 
 
 /******** Prototypes ********/
+void readSerialNumber(uint8_t serial_no[]);
 uint8_t readHWrev(void);
 
 #endif //SAMC_FREERTOS_BOARD_INIT_C_H

@@ -1,3 +1,4 @@
+#include "adc_task.h"
 #include <asf.h>
 #include <board_setup.h>
 #include <log.h>
@@ -99,4 +100,28 @@ uint8_t readHWrev(void) {
     port_pin_set_config(HW_REV_DETECTION_2, &pin_conf);
 
     return rev;
+}
+
+
+/**
+ * read the HW Serialnumber and write it to a given array
+ * @param serial_no array to store the HW Serial number in, has to be at least 16 bytes long
+ */
+void readSerialNumber(uint8_t serial_no[]) {
+	// copy serialnumber to ram!
+	// Word 0
+	uint32_t tmp =  *((uint32_t *) 0x0080A00C);
+	serial_no[0] = (uint8_t) (tmp >> 24);
+	serial_no[1] = (uint8_t) (tmp >> 16);
+	serial_no[2] = (uint8_t) (tmp >> 8);
+	serial_no[3] = (uint8_t) (tmp >> 0);
+
+	// Word 1-3
+	for (uint8_t i = 0; i<9;i+=4) {
+		tmp = *((uint32_t *) (0x0080A040+i));
+		serial_no[4+(i)] = (uint8_t) (tmp >> 24);
+		serial_no[5+(i)] = (uint8_t) (tmp >> 16);
+		serial_no[6+(i)] = (uint8_t) (tmp >> 8);
+		serial_no[7+(i)] = (uint8_t) (tmp >> 0);
+	}
 }
