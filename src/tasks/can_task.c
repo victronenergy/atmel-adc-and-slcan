@@ -4,11 +4,9 @@
 
 #include <log.h>
 #include "can_task.h"
-#include <ctype.h>
 #include <usb.h>
 #include <cmsis/samc21/include/component/can.h>
 #include <can.h>
-#include "slcan.h"
 #include "uart_methods.h"
 #include "can_methods.h"
 
@@ -16,7 +14,7 @@
  * Prototypes
  */
 void vCanTask(void *pvParameters);
-uart_command_return_t exec_uart_cmd(struct can_module *can_module, Can *can_instance, uint8_t *cmd_buf, can_flags_t *can_flags, uint8_t cantask_id, uint32_t *can_bitrate);
+
 
 /**
  * CanTask handles data incoming from the CAN interface(s) as well as via the UART interface
@@ -34,13 +32,15 @@ void vCanTask(void *pvParameters) {
 	// task parameters (uart+can instances, task id)
 	cantask_params *params = (cantask_params *) pvParameters;
 	Can *can_instance = params->can_instance;
-
 	usart_module_t *usart_instance = params->usart_instance;
 	uint8_t cantask_id = params->task_id;
 
 	// can structure to control the can hw instance
 	struct can_module can_module;
 	uint32_t can_bitrate = 0;
+	uint8_t sequence_counter = 0;
+	uint32_t buf_num = 0;
+	uint8_t *buf = NULL;
 
 	// uart data struct for rx/tx buffers (allows multi buffering)
 	usart_buf_t usart_buf;
@@ -59,9 +59,7 @@ void vCanTask(void *pvParameters) {
 	ulog( &tmp,1);
 	ulog_s("...\r\n");
 
-	uint8_t sequence_counter = 0;
-	uint32_t buf_num = 0;
-	uint8_t *buf = NULL;
+
 
 	for (;;) {
 		/**
@@ -98,118 +96,6 @@ void vCanTask(void *pvParameters) {
 		// simultaneous uart sending of both tasks
 		vTaskDelay(0);
 	}
-}
-
-
-/**
- * handle commands incoming via UART
- *
- * @param can_instance
- * @param cmd_buf
- * @param can_flags
- * @param CAN_init_val
- * @param cantask_id
- * @return
- */
-uart_command_return_t exec_uart_cmd(struct can_module *can_module, Can *can_instance, uint8_t *cmd_buf, can_flags_t *can_flags, uint8_t cantask_id, uint32_t *can_bitrate) {
-	uart_command_return_t return_code = NO_RETURN;
-
-	uint8_t cmd_len = (uint8_t) strlen((char *) cmd_buf);    // get command length
-	uint8_t *cmd_buf_pntr = cmd_buf;    // point to start of received string
-
-	cmd_buf_pntr++;        // skip command identifier
-
-
-	// check if all chars are valid hex chars
-	//TODO possible endless loop!!
-	while (*cmd_buf_pntr) {
-		if(*cmd_buf_pntr == RETURN_CR){
-			*cmd_buf_pntr = 68;
-		}
-
-		if (!isxdigit(*cmd_buf_pntr)) {
-			c_log('x');
-			return RETURN_ERROR;
-		}
-		++cmd_buf_pntr;
-	}
-	cmd_buf_pntr = cmd_buf;    // reset pointer
-
-	switch (*cmd_buf_pntr) {
-		case GET_SERIAL:
-			// get serial number
-			return_code = uart_command_get_serial(cantask_id);
-			break;
-
-		case GET_VERSION:
-			// get hard- and software version
-			return_code = uart_command_get_version(cantask_id);
-			break;
-
-		case GET_SW_VERSION:
-			// get only software version
-			return_code = uart_command_get_sw_version(cantask_id);
-			break;
-
-		case READ_STATUS:
-			// read status flag
-			return_code = uart_command_read_status(can_module, cantask_id, can_flags);
-			break;
-
-		case SET_BITRATE:
-			// set fix bitrate
-			return_code = uart_command_set_bitrate(cmd_len, cmd_buf_pntr, can_bitrate, can_flags);
-			break;
-
-		case OPEN_CAN_CHAN:
-			// open CAN channel
-			return_code = uart_command_open_can_channel(can_module, can_instance, can_bitrate, can_flags);
-			if(return_code != RETURN_ERROR) {
-				port_pin_set_output_level(LEDPIN_C21_GREEN, LED_ACTIVE);
-			}
-			break;
-
-		case CLOSE_CAN_CHAN:
-			// close CAN channel
-			return_code = uart_command_close_can_channel(can_module, can_flags);
-			if(return_code != RETURN_ERROR) {
-				port_pin_set_output_level(LEDPIN_C21_GREEN, LED_INACTIVE);
-			}
-			break;
-
-		case LISTEN_ONLY:
-			// open CAN channel but listen only
-			return_code = uart_command_listen_only_mode(can_module, can_instance, can_bitrate, can_flags);
-			if(return_code != RETURN_ERROR) {
-				port_pin_set_output_level(LEDPIN_C21_GREEN, LED_ACTIVE);
-			}
-			break;
-
-		case SEND_R11BIT_ID:
-			// send R11bit ID message
-			return_code = uart_command_send_r11bit_id(can_module, cmd_len, cmd_buf_pntr, can_flags);
-			break;
-
-		case SEND_11BIT_ID:
-			// send 11bit ID message
-			return_code = uart_command_send_11bit_id(can_module, cmd_len, cmd_buf_pntr, can_flags);
-			break;
-
-		case SEND_R29BIT_ID:
-			// send R29bit ID message
-			return_code = uart_command_send_r29bit_id(can_module, cmd_len, cmd_buf_pntr, can_flags);
-			break;
-
-		case SEND_29BIT_ID:
-			// send 29bit ID message
-			return_code = uart_command_send_29bit_id(can_module, cmd_len, cmd_buf_pntr, can_flags);
-			break;
-
-		default:
-			// end with error on unknown commands
-			return RETURN_ERROR;
-	}
-	return return_code;
 }
 
 
