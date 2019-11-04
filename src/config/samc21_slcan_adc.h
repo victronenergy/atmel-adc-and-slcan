@@ -25,9 +25,9 @@ void system_board_init(void);
 /**
  * \name HW Rev detection Pins
  */
-#define HW_REV_DETECTION_0            PIN_PA02
-#define HW_REV_DETECTION_1            PIN_PA03
-#define HW_REV_DETECTION_2            PIN_PA04
+#define HW_REV_DETECTION_0            PIN_PA18
+#define HW_REV_DETECTION_1            PIN_PA19
+#define HW_REV_DETECTION_2            PIN_PA20
 
 /** \name LED definitions
  *
