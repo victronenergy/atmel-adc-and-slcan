@@ -216,7 +216,7 @@ set(SOURCE_FILES
 		config/custom_board_template.h
 		config/custom_board.h
 		config/samc21_usbcan.h
-		config/samc21_slcan_adc.h
+		config/cerbo_gx_slcan_adc.h
 		utils/board_setup.c
         utils/comm_interface_setup.c
         utils/comm_interface_setup.h

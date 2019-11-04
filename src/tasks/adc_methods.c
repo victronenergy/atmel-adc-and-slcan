@@ -3,13 +3,11 @@
 //
 
 #include "asf.h"
-#include <samc21_slcan_adc.h>
 #include "adc_methods.h"
 #include <adc.h>
 #include <adc_sam_l_c/adc_feature.h>
 #include <dma.h>
 #include <adc_callback.h>
-#include <samc21_slcan_adc.h>
 #include <log.h>
 #include "i2c_vitual_eeprom.h"
 

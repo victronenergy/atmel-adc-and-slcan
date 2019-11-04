@@ -2,7 +2,6 @@
 // Created by stekreis on 14.03.18.
 //
 
-#include <samc21_slcan_adc.h>
 #include "comm_interface_setup.h"
 
 /******** Methods ********/

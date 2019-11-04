@@ -3,7 +3,6 @@
 //
 
 #include "asf.h"
-#include <samc21_slcan_adc.h>
 #include "i2c_vitual_eeprom.h"
 #include "i2c_slave.h"
 #include <i2c_slave_interrupt.h>

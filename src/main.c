@@ -2,7 +2,6 @@
 #include <stack_task.h>
 #include <comm_interface_setup.h>
 #include <board_setup.h>
-#include <samc21_slcan_adc.h>
 #include "adc_task.h"
 #include "stdint.h"
 #include "conf_can.h"

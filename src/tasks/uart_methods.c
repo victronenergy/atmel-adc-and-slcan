@@ -4,7 +4,6 @@
 
 #include "can_task.h"
 #include <log.h>
-#include <samc21_slcan_adc.h>
 #include <ctype.h>
 #include <board_setup.h>
 #include "can.h"

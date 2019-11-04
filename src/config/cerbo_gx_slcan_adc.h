@@ -1,5 +1,5 @@
-#ifndef SAMC21_SLCAN_ADC_H_INCLUDED
-#define SAMC21_SLCAN_ADC_H_INCLUDED
+#ifndef CERBO_GX_SLCAN_ADC_H_INCLUDED
+#define CERBO_GX_SLCAN_ADC_H_INCLUDED
 
 #include <compiler.h>
 
@@ -10,7 +10,7 @@ extern "C" {
 void system_board_init(void);
 
 /** Name string macro */
-#define BOARD_NAME                "SAMC21_SLCAN_ADC"
+#define BOARD_NAME                "Cerbo GX"
 
 /** \name Resonator definitions
  *  @{ */
@@ -25,9 +25,9 @@ void system_board_init(void);
 /**
  * \name HW Rev detection Pins
  */
-#define HW_REV_DETECTION_0            PIN_PA18
-#define HW_REV_DETECTION_1            PIN_PA19
-#define HW_REV_DETECTION_2            PIN_PA20
+#define HW_REV_DETECTION_0		PIN_PA18
+#define HW_REV_DETECTION_1		PIN_PA19
+#define HW_REV_DETECTION_2		PIN_PA20
 
 /** \name LED definitions
  *
@@ -115,4 +115,4 @@ void system_board_init(void);
 }
 #endif
 
-#endif  /* SAMC21_SLCAN_ADC_H_INCLUDED */
+#endif  /* CERBO_GX_SLCAN_ADC_H_INCLUDED */

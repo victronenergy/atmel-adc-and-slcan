@@ -17,7 +17,7 @@
 #elif CUSTOM_BOARD == CUSTOM_BOARD_1 	//change name to your needs!
 # include  "samc21_usbcan.h"			//change name to your needs!
 #elif CUSTOM_BOARD == CERBO_SLCAN_ADC 	//change name to your needs!
-# include  "samc21_slcan_adc.h"			//change name to your needs!
+# include  "cerbo_gx_slcan_adc.h"		//change name to your needs!
 #else
 #  error "No known Unipoin board defined"
 #endif

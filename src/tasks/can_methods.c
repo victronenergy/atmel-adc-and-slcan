@@ -4,7 +4,6 @@
 
 #include "can.h"
 #include "can_task.h"
-#include <samc21_slcan_adc.h>
 #include <usb.h>
 #include "can_methods.h"
 #include "slcan.h"
