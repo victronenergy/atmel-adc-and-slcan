@@ -7,27 +7,19 @@
 #include "i2c_vitual_eeprom.h"
 #include "adc_methods.h"
 
-/*
- * Defines
- */
-
+/******** Defines ********/
 #define SLAVE_ADDRESS		0x12
 
 #ifndef SW_VERSION
 	#define SW_VERSION 		-1
 #endif
 
-/*
- * Prototypes
- */
+/******** Internal Prototypes ********/
 void vAdcTask(void *pvParameters);
 void readSerialNumber(uint8_t serial_no[]);
 
 
-/*
- * Methods
- */
-
+/******** Methods ********/
 /**
  * read the HW Serialnumber and write it to a given array
  * @param serial_no array to store the HW Serial number in, has to be at least 16 bytes long
@@ -132,13 +124,14 @@ void vAdcTask(void *pvParameters){
 	}
 }
 
+
 /**
  * will be called from main to set up the adc task, will suspend the task after creation
  *
  *
  * @param params contains the pointers to the modules and structs that should not life inside the task, but as
  * local variable in main.
- * @return NULL
+ * @return NULL or on success a valid handle
  */
 TaskHandle_t vCreateAdcTask(adctask_params *params) {
 

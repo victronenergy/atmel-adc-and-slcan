@@ -6,13 +6,24 @@
 #include <stack_task.h>
 
 
-
+/******** Internal Prototypes ********/
 void vStackTask(void *pvParameters);
 void test_mark(UBaseType_t *rev, TaskHandle_t *task, bool override);
 
+
+/******** Global Variables ********/
 TaskHandle_t **task_handles;
 uint8_t num_handles = 0;
 
+
+/******** Methods ********/
+/**
+ * will test the given task if the free mem region has changed
+ *
+ * @param rev pointer to a variable that holds the last calculated value of free mem
+ * @param task task handle to test
+ * @param override override the test and output the current status
+ */
 void test_mark(UBaseType_t *rev, TaskHandle_t *task, bool override) {
 	UBaseType_t i;
 
@@ -24,16 +35,18 @@ void test_mark(UBaseType_t *rev, TaskHandle_t *task, bool override) {
 		ulog_s(pcTaskGetName(*task));
 		ulog_s(" mark: ");
 		xlog(s, l);
-//		ulog_s(" ");
-//		l = sprintf((char *) &s[0], "%i %i %i", ((uint8_t)*rev), ((uint8_t)*(rev+1)), ((uint8_t)*(rev+2)));
-//		xlog(s, l);
-
 		ulog_s("\r\n");
 
 	}
 }
 
 
+/**
+ * stack task, will be active every 2 sec and will check if the memory regions of the other tasks have changed.
+ * If the region has changed, the current free ram will pushed to debug output.
+ * this task will be used to enable all other tasks in the given sequence
+ * @param pvParameters not used
+ */
 void vStackTask(void *pvParameters) {
 	ulog_s("stacktask begin loop\r\n");
 
@@ -66,8 +79,12 @@ void vStackTask(void *pvParameters) {
 }
 
 
-
-
+/**
+ * will create the stack task, will store the given handles in global variables
+ * @param handles task handles to test and enable
+ * @param count total number of handles
+ * @return NULL or on success a valid handle
+ */
 TaskHandle_t vCreateStackTask(TaskHandle_t *handles[], uint8_t count) {
 
 	task_handles = handles;
@@ -92,8 +109,6 @@ TaskHandle_t vCreateStackTask(TaskHandle_t *handles[], uint8_t count) {
 		ulog_s("successfully created Stack Task\r\n");
 
 		/* The task was created.  Use the task's handle to delete the task. */
-		//vTaskDelete( xHandle );
-		//vTaskSuspend(xHandle);
 		return xHandle;
 	}
 	return NULL;

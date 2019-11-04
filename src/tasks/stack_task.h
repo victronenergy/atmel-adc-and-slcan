@@ -7,20 +7,15 @@
 
 #include <asf.h>
 
+/******** Defines ********/
 #define STACK_TASK_MAX_TASKS 4
 
+/******** Methods ********/
 /**
- *
- *
- *
- *
- */
-
-/**
- * stacktask handler is used to control the running tasks + itself. (monitor there stack sizes)
- * @param handles array of TaskHandle_t, the first entry will be resumed first.
- * @param count number of TaskHandle_t in array
- * @return Handle of the StackTask
+ * will create the stack task, will store the given handles in global variables
+ * @param handles task handles to test and enable
+ * @param count total number of handles
+ * @return NULL or on success a valid handle
  */
 TaskHandle_t vCreateStackTask(TaskHandle_t *handles[], uint8_t count);
 

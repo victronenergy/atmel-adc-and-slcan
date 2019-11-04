@@ -28,6 +28,11 @@ void i2c_callback_error(i2c_module_t *module);
 
 
 /******** Methods ********/
+/**
+ * will be called to set up the i2c module
+ * @param i2c_module i2c module
+ * @param slave_address i2c slave address
+ */
 void configure_i2c_slave(i2c_module_t *i2c_module, uint8_t slave_address) {
 
 	configASSERT(i2c_module);

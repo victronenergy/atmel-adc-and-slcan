@@ -5,7 +5,11 @@
 #include <samc21_slcan_adc.h>
 #include "comm_interface_setup.h"
 
-// debug interface
+/******** Methods ********/
+/**
+ * configure debug interface
+ * @param usart_module usart module
+ */
 void configure_log_uart(usart_module_t *usart_module) {
     struct usart_config config_usart;
     usart_get_config_defaults(&config_usart);
@@ -20,7 +24,11 @@ void configure_log_uart(usart_module_t *usart_module) {
     usart_enable(usart_module);
 }
 
-// usb uart interface associated with can0
+
+/**
+ * configure usb uart interface associated with can0
+ * @param usart_module usart module
+ */
 void configure_uart_can0(usart_module_t *usart_module) {
     struct usart_config config_usart;
     usart_get_config_defaults(&config_usart);

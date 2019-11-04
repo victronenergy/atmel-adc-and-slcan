@@ -10,12 +10,12 @@
 #include "uart_methods.h"
 #include "can_methods.h"
 
-/*
- * Prototypes
- */
+
+/******** Internal Prototypes ********/
 void vCanTask(void *pvParameters);
 
 
+/******** Methods ********/
 /**
  * CanTask handles data incoming from the CAN interface(s) as well as via the UART interface and transfer it to the
  * other interface
@@ -100,13 +100,14 @@ void vCanTask(void *pvParameters) {
 	}
 }
 
+
 /**
  * will be called from main to set up the can task, will suspend the task after creation
  *
  *
  * @param params contains the pointers to the modules and structs that should not life inside the task, but as
  * local variable in main.
- * @return NULL
+ * @return NULL or on success a valid handle
  */
 TaskHandle_t vCreateCanTask(cantask_params *params) {
 

@@ -11,10 +11,8 @@
 #include "slcan.h"
 #include "uart_methods.h"
 
-/*
- * Prototypes
- */
 
+/******** Internal Prototypes ********/
 // can control/setting commands
 uart_command_return_t uart_command_get_serial(uint8_t cantask_id);
 uart_command_return_t uart_command_get_version(uint8_t cantask_id);
@@ -31,10 +29,8 @@ uart_command_return_t uart_command_send_11bit_id(struct can_module *can_module, 
 uart_command_return_t uart_command_send_r29bit_id(struct can_module *can_module, uint8_t cmd_len, uint8_t *cmd_buf_pntr, can_flags_t *can_flags);
 uart_command_return_t uart_command_send_29bit_id(struct can_module *can_module, uint8_t cmd_len, uint8_t *cmd_buf_pntr, can_flags_t *can_flags);
 
-/*
- * Methods
- */
 
+/******** Methods ********/
 /**
  * will be called from CAN-TASK and processes the command given in cmd_buf from uart receive
  *
@@ -148,6 +144,11 @@ uart_command_return_t exec_uart_cmd(struct can_module *can_module, Can *can_inst
 }
 
 
+/**
+ * will return the serial (static number)
+ * @param cantask_id can id
+ * @return return ERROR_BUSY or RETURN_CR
+ */
 uart_command_return_t uart_command_get_serial(uint8_t cantask_id) {
 	if (!usb_putc(GET_SERIAL,cantask_id))
 		return ERROR_BUSY;
@@ -157,6 +158,11 @@ uart_command_return_t uart_command_get_serial(uint8_t cantask_id) {
 }
 
 
+/**
+ * will return the HW and SW versio (static numbers)
+ * @param cantask_id can id
+ * @return return ERROR_BUSY or RETURN_CR
+ */
 uart_command_return_t uart_command_get_version(uint8_t cantask_id) {
 	if (!usb_putc(GET_VERSION,cantask_id))
 		return ERROR_BUSY;
@@ -168,6 +174,11 @@ uart_command_return_t uart_command_get_version(uint8_t cantask_id) {
 }
 
 
+/**
+ * will return the SW version (static numbers)
+ * @param cantask_id can id
+ * @return return ERROR_BUSY or RETURN_CR
+ */
 uart_command_return_t uart_command_get_sw_version(uint8_t cantask_id) {
 	if (!usb_putc(GET_SW_VERSION,cantask_id))
 		return ERROR_BUSY;
@@ -178,6 +189,14 @@ uart_command_return_t uart_command_get_sw_version(uint8_t cantask_id) {
 	return RETURN_CR;
 }
 
+
+/**
+ * will return the status
+ * @param can_module can module
+ * @param cantask_id can id
+ * @param can_flags can flags struct
+ * @return will return ERROR_BUSY or RETURN_CR
+ */
 uart_command_return_t uart_command_read_status(struct can_module *can_module, uint8_t cantask_id, can_flags_t *can_flags) {
 	uint8_t flags = 0;
 	// if the bus is not on, the HW is not available and a read from HW resouces will lead to an infinit wait here!
@@ -207,6 +226,14 @@ uart_command_return_t uart_command_read_status(struct can_module *can_module, ui
 }
 
 
+/**
+ * will set the bitrate
+ * @param cmd_len cmd length in cmd_buf
+ * @param cmd_buf_pntr pointer to the cmd_buf
+ * @param can_bitrate pointer to a variable to store the bitrate
+ * @param can_flags can flags struct
+ * @return will return RETURN_ERROR or RETURN_CR
+ */
 uart_command_return_t uart_command_set_bitrate(uint8_t cmd_len, uint8_t *cmd_buf_pntr, uint32_t *can_bitrate, can_flags_t *can_flags) {
 	// check if CAN controller is in reset mode
 	if (can_flags->bus_on) {
@@ -232,6 +259,14 @@ uart_command_return_t uart_command_set_bitrate(uint8_t cmd_len, uint8_t *cmd_buf
 }
 
 
+/**
+ * will open the can channel
+ * @param can_module can module
+ * @param can_instance can instance
+ * @param can_bitrate pointer to the varaible that stores the baudrate
+ * @param can_flags can flags struct
+ * @return will return RETURN_ERROR or RETURN_CR
+ */
 uart_command_return_t uart_command_open_can_channel(struct can_module *can_module, Can *can_instance, uint32_t *can_bitrate, can_flags_t *can_flags) {
 	// return error if controller is not initialized
 	if (!can_flags->init_complete) {
@@ -249,6 +284,12 @@ uart_command_return_t uart_command_open_can_channel(struct can_module *can_modul
 }
 
 
+/**
+ * will close the can channel
+ * @param can_module can module
+ * @param can_flags can flags struct
+ * @return will return RETURN_ERROR or RETURN_CR
+ */
 uart_command_return_t uart_command_close_can_channel(struct can_module *can_module, can_flags_t *can_flags) {
 	if (!can_flags->bus_on) {
 		return RETURN_ERROR;
@@ -260,6 +301,14 @@ uart_command_return_t uart_command_close_can_channel(struct can_module *can_modu
 }
 
 
+/**
+ * will open the can channel in listen only mode
+ * @param can_module can module
+ * @param can_instance can instance
+ * @param can_bitrate pointer to the varaible that stores the baudrate
+ * @param can_flags can flags struct
+ * @return will return RETURN_ERROR or RETURN_CR
+ */
 uart_command_return_t uart_command_listen_only_mode(struct can_module *can_module, Can *can_instance, uint32_t *can_bitrate, can_flags_t *can_flags) {
 	// return error if controller is not initialized or already open
 	if (!can_flags->init_complete) {
@@ -278,6 +327,14 @@ uart_command_return_t uart_command_listen_only_mode(struct can_module *can_modul
 }
 
 
+/**
+ * will send a standard Remote Transmission Request
+ * @param can_module can module
+ * @param cmd_len cmd length in cmd_buf
+ * @param cmd_buf_pntr pointer to the cmd_buf
+ * @param can_flags can flags struct
+ * @return will return RETURN_ERROR, ERROR_BUSY or NO_RETURN
+ */
 uart_command_return_t uart_command_send_r11bit_id(struct can_module *can_module, uint8_t cmd_len, uint8_t *cmd_buf_pntr, can_flags_t *can_flags) {
 	struct can_tx_element tx_element;
 
@@ -309,6 +366,15 @@ uart_command_return_t uart_command_send_r11bit_id(struct can_module *can_module,
 	return transmit_CAN(can_module, &tx_element);
 }
 
+
+/**
+ * will send a standard Frame
+ * @param can_module can module
+ * @param cmd_len cmd length in cmd_buf
+ * @param cmd_buf_pntr pointer to the cmd_buf
+ * @param can_flags can flags struct
+ * @return will return RETURN_ERROR, ERROR_BUSY or NO_RETURN
+ */
 uart_command_return_t uart_command_send_11bit_id(struct can_module *can_module, uint8_t cmd_len, uint8_t *cmd_buf_pntr, can_flags_t *can_flags) {
 	struct can_tx_element tx_element;
 
@@ -358,6 +424,15 @@ uart_command_return_t uart_command_send_11bit_id(struct can_module *can_module, 
 	return transmit_CAN(can_module, &tx_element);
 }
 
+
+/**
+ * will send a extended Remote Transmission Request
+ * @param can_module can module
+ * @param cmd_len cmd length in cmd_buf
+ * @param cmd_buf_pntr pointer to the cmd_buf
+ * @param can_flags can flags struct
+ * @return will return RETURN_ERROR, ERROR_BUSY or NO_RETURN
+ */
 uart_command_return_t uart_command_send_r29bit_id(struct can_module *can_module, uint8_t cmd_len, uint8_t *cmd_buf_pntr, can_flags_t *can_flags) {
 	struct can_tx_element tx_element;
 
@@ -400,6 +475,14 @@ uart_command_return_t uart_command_send_r29bit_id(struct can_module *can_module,
 }
 
 
+/**
+ * will send a extended Frame
+ * @param can_module can module
+ * @param cmd_len cmd length in cmd_buf
+ * @param cmd_buf_pntr pointer to the cmd_buf
+ * @param can_flags can flags struct
+ * @return will return RETURN_ERROR, ERROR_BUSY or NO_RETURN
+ */
 uart_command_return_t uart_command_send_29bit_id(struct can_module *can_module, uint8_t cmd_len, uint8_t *cmd_buf_pntr, can_flags_t *can_flags) {
 	struct can_tx_element tx_element;
 

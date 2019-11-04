@@ -11,6 +11,8 @@
 #include "i2c_vitual_eeprom.h"
 #include "adc_methods.h"
 
+
+/******** Typedef ********/
 typedef struct {
 	adc_module_t *adc_instance0;
 	adc_module_t *adc_instance1;
@@ -19,6 +21,7 @@ typedef struct {
 	dma_resource_t *dma_resource1;
 } adctask_params;
 
+/******** Prototypes ********/
 TaskHandle_t vCreateAdcTask(adctask_params *params);
 
 #endif //SAMC_FREERTOS_ADC_TASK_H

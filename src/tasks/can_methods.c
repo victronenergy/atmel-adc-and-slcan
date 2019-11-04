@@ -11,6 +11,7 @@
 #include "uart_methods.h"
 
 
+/******** Methods ********/
 /**
  * Read message from CAN and send as slcan message via uart
  * @param can_module can module we want to read from
@@ -136,6 +137,7 @@ bool check_and_transfer_can_message_to_uart(struct can_module *const can_module,
 	return messsage_read;
 }
 
+
 /**
  * method usually resets the errorflags in the SJA1000, here we to not more than reset the ERROR LED
  * @param CAN_flags pointer to the error flags, currently not used
@@ -145,12 +147,13 @@ void reset_can_errorflags(can_flags_t *CAN_flags) {
 	port_pin_set_output_level(LEDPIN_C21_RED, LED_INACTIVE);
 }
 
- /**
-  * setup and open the CAN interface
-  * @param can_module can module we want to setup and start
-  * @param can_hw pointer to the hardware of the can interface
-  * @param bitrate bitrate the can hardware should run at
-  */
+
+/**
+ * setup and open the CAN interface
+ * @param can_module can module we want to setup and start
+ * @param can_hw pointer to the hardware of the can interface
+ * @param bitrate bitrate the can hardware should run at
+ */
 void setup_can_instance(struct can_module *can_module, Can *can_hw, uint32_t bitrate){
 
 	/* Initialize the module. */
@@ -174,6 +177,7 @@ void setup_can_instance(struct can_module *can_module, Can *can_hw, uint32_t bit
 	// start hw
 	can_start(can_module);
 }
+
 
 /**
  * start sending a can message (transfer a tx_element to the tx_fifo and initiate the sendout)

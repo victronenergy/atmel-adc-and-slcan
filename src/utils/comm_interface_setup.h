@@ -12,10 +12,16 @@
 #include <log.h>
 #include <can.h>
 
+/******** Prototypes ********/
+/**
+ * configure debug interface
+ * @param usart_module usart module
+ */
 void configure_log_uart(usart_module_t *usart_module);
+/**
+ * configure usb uart interface associated with can0
+ * @param usart_module usart module
+ */
 void configure_uart_can0(usart_module_t *usart_module);
-void configure_uart_can1(usart_module_t *usart_module);
-void configure_can0(struct can_module *can_instance);
-void configure_can1(struct can_module *can_instance);
 
 #endif //SAMC_FREERTOS_COMM_INIT_H

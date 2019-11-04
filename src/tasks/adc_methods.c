@@ -13,14 +13,25 @@
 #include <log.h>
 #include "i2c_vitual_eeprom.h"
 
+
+/******** Global Variables ********/
+adc_module_t *master_adc_module = NULL;
+
+
+/******** Internal Prototypes ********/
 void dma_callback_transfer_done0(struct dma_resource *const resource);
 void dma_callback_transfer_done1(struct dma_resource *const resource);
 void configure_adc(adc_module_t *adc_instance0, adc_module_t *adc_instance1);
 void configure_adc_dma_resource(struct dma_resource *resource, uint8_t dma_peripheral_trigger);
 void setup_transfer_descriptor(DmacDescriptor *descriptor, DmacDescriptor *followingDescriptior, uint32_t source_addr, uint32_t dest_addr);
 
-adc_module_t *master_adc_module = NULL;
 
+/******** Methods ********/
+/**
+ * configures both adc instrances
+ * @param adc_instance0 pointer to the master adc instance
+ * @param adc_instance1 pointer to the slave adc instance
+ */
 void configure_adc(adc_module_t *adc_instance0, adc_module_t *adc_instance1) {
 	struct adc_config config_adc;
 	adc_get_config_defaults(&config_adc);
@@ -64,6 +75,12 @@ void configure_adc(adc_module_t *adc_instance0, adc_module_t *adc_instance1) {
 	}
 }
 
+
+/**
+ * configures the dma resource of the adc conversion result transfer
+ * @param resource dma-resource that should be configured
+ * @param dma_peripheral_trigger DMA trigger source
+ */
 void configure_adc_dma_resource(struct dma_resource *resource, uint8_t dma_peripheral_trigger) {
 	struct dma_resource_config config;
 	dma_get_config_defaults(&config);
@@ -77,6 +94,14 @@ void configure_adc_dma_resource(struct dma_resource *resource, uint8_t dma_perip
 
 }
 
+
+/**
+ * configures a transfer of the dma controller (transfer 4x 16Bit values and increment the write addresses after each write in the block)
+ * @param descriptor dma descriptor to configure
+ * @param followingDescriptior pointer to a following descriptor if there is any, otherwise NULL
+ * @param source_addr address to read from
+ * @param dest_addr address to write to
+ */
 void setup_transfer_descriptor(DmacDescriptor *descriptor, DmacDescriptor *followingDescriptior, const uint32_t source_addr, const uint32_t dest_addr) {
 	struct dma_descriptor_config descriptor_config;
 	dma_descriptor_get_config_defaults(&descriptor_config);
@@ -94,8 +119,14 @@ void setup_transfer_descriptor(DmacDescriptor *descriptor, DmacDescriptor *follo
 }
 
 
+/**
+ * configure the hole dual adc and dma struture, both adcs work as a unit to read 8 channels and use two dma resources to transfer the results to the eeprom array
+ * @param dma_resource both used dma resources
+ * @param adc_instances both adc instances
+ * @param dma_desc 4 descriptors, two for each dma resource, because we use double buffering for the write location
+ * @param dest_ptr_adr 4 adr, two for each dma resource, because we use double buffering for the write location
+ */
 void configure_adc_dma(dma_resource_t* dma_resource[2], adc_module_t* adc_instances[2], DmacDescriptor dma_desc[4], uint32_t dest_ptr_adr[4]) {
-
 	configASSERT(adc_instances);
 	configASSERT(adc_instances[0]);
 	configASSERT(adc_instances[1]);
@@ -132,17 +163,36 @@ void configure_adc_dma(dma_resource_t* dma_resource[2], adc_module_t* adc_instan
 }
 
 
+/**
+ * callback that will be called if the dma transfer is done for dma resource 0
+ * @param resource dma resource
+ */
 void dma_callback_transfer_done0(struct dma_resource *const resource) {
 }
 
+
+/**
+ * callback that will be called if the dma transfer is done for dma resource 1, this will finished last, so this will increment the counter in the eeprom
+ * @param resource dma resource
+ */
 void dma_callback_transfer_done1(struct dma_resource * const resource) {
 	inc_adc_data_counter();
 }
 
+
+/**
+ * method that will initiate a new adc conversion
+ */
 void adc_trigger_new_conv(void) {
 	adc_start_conversion(master_adc_module);
 }
 
+
+/******** Getter/Setter ********/
+/**
+ * will return if the adc is currently busy or idle
+ * @return true if adc is busy otherwise false
+ */
 bool is_adc_busy(void) {
 	bool status_busy = false;
 	uint8_t sequence_state = 0;

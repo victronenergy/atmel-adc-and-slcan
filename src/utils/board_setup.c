@@ -2,11 +2,16 @@
 #include <board_setup.h>
 #include <log.h>
 
-// PROTOTYPES
+/******** Internal Prototypes ********/
 void vApplicationStackOverflowHook(TaskHandle_t *pxTask, signed portCHAR *pcTaskName);
 
 
-// METHODS
+/******** Methods ********/
+/**
+ * will be called from RTOS if the memory region of a task overwritten by local variables
+ * @param pxTask handle to the task
+ * @param pcTaskName name of the task
+ */
 void vApplicationStackOverflowHook(TaskHandle_t *pxTask, signed portCHAR *pcTaskName) {
 	system_interrupt_enable_global();
 	ulog_s("\r\nFATAL: task (");
@@ -18,6 +23,10 @@ void vApplicationStackOverflowHook(TaskHandle_t *pxTask, signed portCHAR *pcTask
 	};
 }
 
+
+/**
+ * setup of pins and modules
+ */
 void board_init(void) {
 	struct port_config pin_conf;
 	port_get_config_defaults(&pin_conf);
@@ -58,6 +67,11 @@ void board_init(void) {
 
 }
 
+
+/**
+ * read HW-REV from input pins, there are 3 pins that have resistor places to read that version from
+ * @return return the number read from the resistors
+ */
 uint8_t readHWrev(void) {
 	uint8_t rev = 0;
     struct port_config pin_conf;
