@@ -145,15 +145,21 @@ uart_command_return_t exec_uart_cmd(struct can_module *can_module, Can *can_inst
 
 
 /**
- * will return the serial (static number)
+ * will return the hw serial number
  * @param cantask_id can id
  * @return return ERROR_BUSY or RETURN_CR
  */
 uart_command_return_t uart_command_get_serial(uint8_t cantask_id) {
-	if (!usb_putc(GET_SERIAL,cantask_id))
+	if (!usb_putc(GET_SERIAL,cantask_id)) {
 		return ERROR_BUSY;
-	if (!usb_puts((uint8_t *) SERIAL,cantask_id))
-		return ERROR_BUSY;
+	}
+	uint8_t serial[16] = {0};
+	readSerialNumber(serial);
+	for (uint8_t i = 0; i < 16; i++) {
+		if (!usb_byte2ascii(serial[i],cantask_id)) {
+			return ERROR_BUSY;
+		}
+	}
 	return RETURN_CR;
 }
 

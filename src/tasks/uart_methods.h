@@ -8,8 +8,6 @@
 #include "can_methods.h"
 
 /******** Defines ********/
-//TODO these values are chosen arbitrarily, set appropriate values
-#define SERIAL        "2821"	// device serial number
 #ifndef SW_VERSION
 	#define SW_VERSION 		((uint8_t) -1)
 #endif

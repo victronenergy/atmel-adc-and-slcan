@@ -27,7 +27,7 @@
 #ifndef __USB_H__
 #define __USB_H__
 
-#define USB_CMD_BUF_SIZE 32
+#define USB_CMD_BUF_SIZE 40
 #define USB_CMD_TX_BUF_COUNT 2 // must be power of 2 (minimum 2)
 #define USB_CMD_RX_BUF_COUNT 1 // must be power of 2
 
