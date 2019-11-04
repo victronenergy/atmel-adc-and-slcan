@@ -75,6 +75,8 @@ void vStackTask(void *pvParameters) {
 		test_mark( &freemem[num_handles+1], &s, override);
 		vTaskDelay((const TickType_t) 2000);
 
+		//reset the microcontroller internal watchdog counter
+		wdt_reset_count();
 	}
 }
 

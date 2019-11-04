@@ -77,11 +77,24 @@ int main(void) {
 		struct nvm_fusebits fuses;
 		nvm_get_fuses(&fuses);
 		if(fuses.bodvdd_enable != true) {
-			ulog_s("update fuses");
+			ulog_s("update BOD fuses");
 			fuses.bodvdd_enable = true;
 			fuses.bodvdd_action = NVM_BOD33_ACTION_RESET;
 			fuses.bodvdd_hysteresis = true;
 			fuses.bodvdd_level = 8;
+			if (nvm_set_fuses(&fuses) != STATUS_OK) {
+				ulog_s(" failed\r\n");
+			} else {
+				ulog_s(" ok\r\n");
+			}
+		}
+		nvm_get_fuses(&fuses);
+		if (fuses.wdt_enable != true) {
+			ulog_s("update WDT fuses");
+			fuses.wdt_always_on = true;
+			fuses.wdt_timeout_period = WDT_CONFIG_PER_CYC4096_Val; //Timeout ~4sec
+			fuses.wdt_window_mode_enable_at_poweron = false;
+			fuses.wdt_enable = true;
 			if (nvm_set_fuses(&fuses) != STATUS_OK) {
 				ulog_s(" failed\r\n");
 			} else {
