@@ -17,10 +17,12 @@ void vCanTask(void *pvParameters);
 
 
 /**
- * CanTask handles data incoming from the CAN interface(s) as well as via the UART interface
+ * CanTask handles data incoming from the CAN interface(s) as well as via the UART interface and transfer it to the
+ * other interface
  *
  *
- * @param pvParameters
+ * @param pvParameters contains the pointers to the modules and structs that should not live inside the task, but as
+ * local variable in main.
  */
 void vCanTask(void *pvParameters) {
 
@@ -98,7 +100,14 @@ void vCanTask(void *pvParameters) {
 	}
 }
 
-
+/**
+ * will be called from main to set up the can task, will suspend the task after creation
+ *
+ *
+ * @param params contains the pointers to the modules and structs that should not life inside the task, but as
+ * local variable in main.
+ * @return NULL
+ */
 TaskHandle_t vCreateCanTask(cantask_params *params) {
 
 	BaseType_t xReturned;

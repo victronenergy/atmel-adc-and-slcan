@@ -11,10 +11,10 @@
  * Defines
  */
 
-#define SLAVE_ADDRESS					0x12
+#define SLAVE_ADDRESS		0x12
 
 #ifndef SW_VERSION
-	#define SW_VERSION -1
+	#define SW_VERSION 		-1
 #endif
 
 /*
@@ -24,6 +24,14 @@ void vAdcTask(void *pvParameters);
 void readSerialNumber(uint8_t serial_no[]);
 
 
+/*
+ * Methods
+ */
+
+/**
+ * read the HW Serialnumber and write it to a given array
+ * @param serial_no array to store the HW Serial number in, has to be at least 16 bytes long
+ */
 void readSerialNumber(uint8_t serial_no[]) {
 	// copy serialnumber to ram!
 	// Word 0
@@ -44,10 +52,13 @@ void readSerialNumber(uint8_t serial_no[]) {
 }
 
 
-
+/**
+ * Setup and handles the adc conversion and initialize the i2c_eeprom_emulation
+ *
+ * @param pvParameters contains the pointers to the modules and structs that should not live inside the task, but as
+ * local variable in main.
+ */
 void vAdcTask(void *pvParameters){
-	port_pin_set_output_level(PIN_PA15, true);
-
 	configASSERT(pvParameters);
 	configASSERT(((adctask_params *)pvParameters)->adc_instance0);
 	configASSERT(((adctask_params *)pvParameters)->adc_instance1);
@@ -70,9 +81,12 @@ void vAdcTask(void *pvParameters){
 	configASSERT(dma_adc_resource0);
 	configASSERT(dma_adc_resource1);
 
-	ulog_s("start ADC Task ...\r\n");
-
-	adc_i2c_eeprom_u eeprom_data = {.s.adc_counter = 0xFFFF, .s.adc_tank_channel ={{0}}, .s.adc_temp_channel = {{0}}, .s.preamble = {'V', 'E'}, .s.sw_rev=SW_VERSION, .s.serial_no = {0}};
+	adc_i2c_eeprom_u eeprom_data = {.s.adc_counter = 0xFFFF,
+								 	.s.adc_tank_channel ={{0}},
+								 	.s.adc_temp_channel = {{0}},
+								 	.s.preamble = {'V', 'E'},
+								 	.s.sw_rev=SW_VERSION,
+								 	.s.serial_no = {0}};
 	eeprom_data.s.config_size = (EEPROM_USED_SIZE - ((uint32_t) eeprom_data.s.serial_no - (uint32_t) &eeprom_data));
 	set_eeprom_data_pointer(&eeprom_data);
 
@@ -84,9 +98,7 @@ void vAdcTask(void *pvParameters){
 	set_i2c_slave_data_packet(&i2c_packet);
 
 	DmacDescriptor dma_desc[4]= {SECTION_DMAC_DESCRIPTOR};
-	port_pin_set_output_level(PIN_PA15, false);
 
-//	taskENTER_CRITICAL(  );
 	// configure adc with dma
 	{
 		uint32_t dest_ptr_addr[4];
@@ -108,52 +120,26 @@ void vAdcTask(void *pvParameters){
 
 	// configure i2c slave
 	configure_i2c_slave(((adctask_params *)pvParameters)->i2c_instance,SLAVE_ADDRESS);
-//	taskEXIT_CRITICAL(  );
 
+	ulog_s("start ADC Task ...\r\n");
 
 	while(1) {
-		port_pin_set_output_level(PIN_PA15, true);
 		// idle
-
 		if (!is_adc_busy()) {
-
-			port_pin_set_output_level(PIN_PA15, false);
-			port_pin_set_output_level(PIN_PA15, true);
-/*			uint8_t k = (uint8_t) (eeprom_data.s.adc_counter & 0x01);
-
-				ulog_s("\r\nbuffer: ");
-				xlog(&k,1);
-
-				ulog_s("\ttank sensor readings: ");
-				for(uint8_t i = 0; i < 4; i++) {
-					xlog_short(&eeprom_data.s.adc_tank_channel[k][i]);
-					ulog_s(" ");
-				}
-
-				ulog_s("\ttemp sensor readings: ");
-				for(uint8_t i = 0; i < 4; i++) {
-					xlog_short(&eeprom_data.s.adc_temp_channel[k][i]);
-					ulog_s(" ");
-				}
-
-				ulog_s("\tcnt: ");
-				xlog_short(&eeprom_data.s.adc_counter);*/
-
-			port_pin_set_output_level(PIN_PA15, false);
-			port_pin_set_output_level(PIN_PA15, true);
-
-//			port_pin_set_output_level(PIN_PA14, false);
-			port_pin_set_output_level(PIN_PA19, false);
-//			port_pin_set_output_level(PIN_PA14, true);
-			port_pin_set_output_level(PIN_PA19, true);
 			adc_trigger_new_conv();
 		}
-
-		port_pin_set_output_level(PIN_PA15, false);
 		vTaskDelay(500);
 	}
 }
 
+/**
+ * will be called from main to set up the adc task, will suspend the task after creation
+ *
+ *
+ * @param params contains the pointers to the modules and structs that should not life inside the task, but as
+ * local variable in main.
+ * @return NULL
+ */
 TaskHandle_t vCreateAdcTask(adctask_params *params) {
 
 	BaseType_t xReturned;
@@ -174,7 +160,6 @@ TaskHandle_t vCreateAdcTask(adctask_params *params) {
 		ulog_s("successfully created ADC Task\r\n");
 
 		/* The task was created.  Use the task's handle to delete the task. */
-		//vTaskDelete( xHandle );
 		vTaskSuspend(xHandle);
 		return xHandle;
 	}
