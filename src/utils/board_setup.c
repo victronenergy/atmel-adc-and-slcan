@@ -40,13 +40,11 @@ void board_init(void) {
 	port_pin_set_config(PIN_PA12, &pin_conf_led);
 	port_pin_set_config(PIN_PA13, &pin_conf_led);
 
-	struct port_config debug_port;
+	//debug pins
+/*	struct port_config debug_port;
 	port_get_config_defaults(&debug_port);
-
 	debug_port.direction  = PORT_PIN_DIR_OUTPUT;
 
-
-	//debug pins
 	port_pin_set_config(PIN_PA15, &debug_port);
 	port_pin_set_config(PIN_PA14, &debug_port);
 	port_pin_set_config(PIN_PA19, &debug_port);
@@ -56,7 +54,7 @@ void board_init(void) {
 	port_pin_set_output_level(PIN_PA14, false);
 	port_pin_set_output_level(PIN_PA19, false);
 	port_pin_set_output_level(PIN_PA20, false);
-
+*/
 
 	/* Set up the CAN TX/RX pins */
 	struct system_pinmux_config pin_config;

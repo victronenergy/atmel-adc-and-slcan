@@ -14,8 +14,6 @@
 int main(void) {
 	system_init();
 	delay_init();
-
-	//TODO remove, only for debug (LED and buttons on xplained board)
 	board_init();
 
 	/*
