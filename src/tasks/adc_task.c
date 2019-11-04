@@ -7,6 +7,7 @@
 #include "i2c_vitual_eeprom.h"
 #include "adc_methods.h"
 #include "board_setup.h"
+#include "stack_task.h"
 
 /******** Defines ********/
 #define SLAVE_ADDRESS		0x12
@@ -49,6 +50,7 @@ void vAdcTask(void *pvParameters){
 	configASSERT(dma_adc_resource0);
 	configASSERT(dma_adc_resource1);
 
+	TaskHandle_t xhandle = xTaskGetCurrentTaskHandle();
 	adc_i2c_eeprom_u eeprom_data = {.s.adc_counter = 0xFFFF,
 								 	.s.adc_tank_channel ={{0}},
 								 	.s.adc_temp_channel = {{0}},
@@ -97,6 +99,9 @@ void vAdcTask(void *pvParameters){
 			adc_trigger_new_conv();
 		}
 		vTaskDelay(500);
+
+		//call wdt reset method
+		task_wdt_reset(xhandle);
 	}
 }
 

@@ -9,6 +9,7 @@
 #include <can.h>
 #include "uart_methods.h"
 #include "can_methods.h"
+#include "stack_task.h"
 
 
 /******** Internal Prototypes ********/
@@ -43,6 +44,7 @@ void vCanTask(void *pvParameters) {
 	uint8_t sequence_counter = 0;
 	uint32_t buf_num = 0;
 	uint8_t *buf = NULL;
+	TaskHandle_t xhandle = xTaskGetCurrentTaskHandle();
 
 	// uart data struct for rx/tx buffers (allows multi buffering)
 	usart_buf_t usart_buf;
@@ -60,8 +62,6 @@ void vCanTask(void *pvParameters) {
 	uint8_t tmp = (uint8_t) (cantask_id + 0x30);
 	ulog( &tmp,1);
 	ulog_s("...\r\n");
-
-
 
 	for (;;) {
 		/**
@@ -95,6 +95,9 @@ void vCanTask(void *pvParameters) {
 		// zero task delay used for rescheduling, to prevent interference between
 		// simultaneous uart sending of both tasks
 		vTaskDelay(0);
+
+		//call wdt reset method
+		task_wdt_reset(xhandle);
 	}
 }
 

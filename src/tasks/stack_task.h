@@ -11,6 +11,8 @@
 #define STACK_TASK_MAX_TASKS 4
 
 /******** Methods ********/
+void task_wdt_reset(TaskHandle_t *task);
+
 /**
  * will create the stack task, will store the given handles in global variables
  * @param handles task handles to test and enable

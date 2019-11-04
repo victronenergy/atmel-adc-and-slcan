@@ -14,6 +14,7 @@ void test_mark(UBaseType_t *rev, TaskHandle_t *task, bool override);
 /******** Global Variables ********/
 TaskHandle_t **task_handles;
 uint8_t num_handles = 0;
+uint32_t wdt_trigger_mask = 0;
 
 
 /******** Methods ********/
@@ -37,6 +38,36 @@ void test_mark(UBaseType_t *rev, TaskHandle_t *task, bool override) {
 		xlog(s, l);
 		ulog_s("\r\n");
 
+	}
+}
+
+
+/**
+ * this method will reset the internal wdt counter value if all known task have called this method in this period
+ * @param task caller taskhandle
+ */
+void task_wdt_reset(TaskHandle_t *task) {
+	bool found = false;
+	// run over all known handles and check if the current is known, set bit in mask if found
+	for (uint8_t i = 0; i < num_handles; i++) {
+		if (task == *(task_handles[i])) {
+			wdt_trigger_mask |= (1 << i);
+			found = true;
+		}
+	}
+	if (!found) {
+		// if not found in the controlled tasks,
+		// check if the current handle is the stacktask
+		if (task == NULL) {
+			//check if all tasks have at least called this method once
+			if (wdt_trigger_mask == ((1u << num_handles)-1u)) {
+				// all task have called this method in the stack-task loop delay
+				// so all tasks are healthy, lets reset the microcontroller internal watchdog counter
+				wdt_reset_count();
+				// reset the mask to start a new period
+				wdt_trigger_mask = 0;
+			}
+		}
 	}
 }
 
@@ -75,8 +106,8 @@ void vStackTask(void *pvParameters) {
 		test_mark( &freemem[num_handles+1], &s, override);
 		vTaskDelay((const TickType_t) 2000);
 
-		//reset the microcontroller internal watchdog counter
-		wdt_reset_count();
+		//call wdt reset method, if will reset the wdt counter if all task are healthy and had respond in this period
+		task_wdt_reset(s);
 	}
 }
 
