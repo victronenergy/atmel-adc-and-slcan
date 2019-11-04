@@ -6,11 +6,11 @@
 #include <log.h>
 #include <samc21_slcan_adc.h>
 #include <ctype.h>
+#include <board_setup.h>
 #include "can.h"
 #include "usb.h"
 #include "slcan.h"
 #include "uart_methods.h"
-
 
 /******** Internal Prototypes ********/
 // can control/setting commands
@@ -159,14 +159,15 @@ uart_command_return_t uart_command_get_serial(uint8_t cantask_id) {
 
 
 /**
- * will return the HW and SW versio (static numbers)
+ * will return the HW and SW versio
  * @param cantask_id can id
  * @return return ERROR_BUSY or RETURN_CR
  */
 uart_command_return_t uart_command_get_version(uint8_t cantask_id) {
 	if (!usb_putc(GET_VERSION,cantask_id))
 		return ERROR_BUSY;
-	if (!usb_byte2ascii(HW_VER,cantask_id))
+	uint8_t hw_rev = readHWrev();
+	if (!usb_byte2ascii(hw_rev,cantask_id))
 		return ERROR_BUSY;
 	if (!usb_byte2ascii(SW_VER,cantask_id))
 		return ERROR_BUSY;
@@ -175,7 +176,7 @@ uart_command_return_t uart_command_get_version(uint8_t cantask_id) {
 
 
 /**
- * will return the SW version (static numbers)
+ * will return the SW version
  * @param cantask_id can id
  * @return return ERROR_BUSY or RETURN_CR
  */

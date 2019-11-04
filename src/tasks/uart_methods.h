@@ -9,11 +9,14 @@
 
 /******** Defines ********/
 //TODO these values are chosen arbitrarily, set appropriate values
-#define HW_VER        0x30		// hardware version
-#define SW_VER        0x40		// software version
-#define SW_VER_MAJOR  0x50    // software major version
-#define SW_VER_MINOR  0x60    // software minor version
 #define SERIAL        "2821"	// device serial number
+#ifndef SW_VERSION
+	#define SW_VERSION 		((uint8_t) -1)
+#endif
+
+#define SW_VER        ((uint8_t) SW_VERSION)	// software version
+#define SW_VER_MAJOR  0x20						// software major version
+#define SW_VER_MINOR  SW_VER					// software minor version
 
 
 /******** Typedef ********/
