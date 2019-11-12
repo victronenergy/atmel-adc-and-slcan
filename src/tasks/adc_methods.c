@@ -21,7 +21,7 @@ void dma_callback_transfer_done0(struct dma_resource *const resource);
 void dma_callback_transfer_done1(struct dma_resource *const resource);
 void configure_adc(adc_module_t *adc_instance0, adc_module_t *adc_instance1);
 void configure_adc_dma_resource(struct dma_resource *resource, uint8_t dma_peripheral_trigger);
-void setup_transfer_descriptor(DmacDescriptor *descriptor, DmacDescriptor *followingDescriptior, uint32_t source_addr, uint32_t dest_addr);
+void setup_transfer_descriptor(DmacDescriptor *descriptor, DmacDescriptor *followingDescriptior, uint32_t source_addr, uint32_t dest_addr, uint8_t length);
 
 
 /******** Methods ********/
@@ -44,7 +44,7 @@ void configure_adc(adc_module_t *adc_instance0, adc_module_t *adc_instance1) {
 	config_adc.freerunning		= false;
 	config_adc.left_adjust		= false;
 	config_adc.run_in_standby	= true;
-	config_adc.positive_input_sequence_mask_enable = 1 << ADC_POSITIVE_INPUT_PIN4 | 1 << ADC_POSITIVE_INPUT_PIN5 | 1 << ADC_POSITIVE_INPUT_PIN6 | 1 << ADC_POSITIVE_INPUT_PIN7; //PA04-PA07
+	config_adc.positive_input_sequence_mask_enable = 1 << ADC_POSITIVE_INPUT_PIN4 | 1 << ADC_POSITIVE_INPUT_PIN5 | 1 << ADC_POSITIVE_INPUT_PIN6 | 1 << ADC_POSITIVE_INPUT_PIN7 | 1 << ADC_POSITIVE_INPUT_PIN1; //PA04-PA07, Vclap is at PA03 (AIN(1)
 	config_adc.window.window_mode = ADC_WINDOW_MODE_DISABLE;
 	config_adc.accumulate_samples = ADC_ACCUMULATE_SAMPLES_64;
 	config_adc.divide_result = ADC_DIVIDE_RESULT_16;
@@ -99,19 +99,20 @@ void configure_adc_dma_resource(struct dma_resource *resource, uint8_t dma_perip
  * @param followingDescriptior pointer to a following descriptor if there is any, otherwise NULL
  * @param source_addr address to read from
  * @param dest_addr address to write to
+ * @param length number of transfers this descriptior has to do
  */
-void setup_transfer_descriptor(DmacDescriptor *descriptor, DmacDescriptor *followingDescriptior, const uint32_t source_addr, const uint32_t dest_addr) {
+void setup_transfer_descriptor(DmacDescriptor *descriptor, DmacDescriptor *followingDescriptior, const uint32_t source_addr, const uint32_t dest_addr, uint8_t length) {
 	struct dma_descriptor_config descriptor_config;
 	dma_descriptor_get_config_defaults(&descriptor_config);
 	descriptor_config.block_action = DMA_BLOCK_ACTION_INT;
 	descriptor_config.beat_size = DMA_BEAT_SIZE_HWORD;
 	descriptor_config.dst_increment_enable = true;
 	descriptor_config.src_increment_enable = false;
-	descriptor_config.block_transfer_count = 4;
+	descriptor_config.block_transfer_count = length;
 	descriptor_config.step_size = DMA_ADDRESS_INCREMENT_STEP_SIZE_1;
 	descriptor_config.step_selection = DMA_STEPSEL_SRC;
 	descriptor_config.source_address = (source_addr);
-	descriptor_config.destination_address = (dest_addr+8); // +8 because of DstAddr = DstAddr_start + BTCNT*(BEATSIZE)
+	descriptor_config.destination_address = (dest_addr + (2*length)); // +8 because of DstAddr = DstAddr_start + BTCNT*(BEATSIZE)
 	descriptor_config.next_descriptor_address = (uint32_t)followingDescriptior;
 	dma_descriptor_create(descriptor, &descriptor_config);
 }
@@ -139,8 +140,8 @@ void configure_adc_dma(dma_resource_t* dma_resource[2], adc_module_t* adc_instan
 
 	// configure DMA for ADC0
 	configure_adc_dma_resource(dma_resource[0], ADC0_DMAC_ID_RESRDY);
-	setup_transfer_descriptor(&dma_desc[0], &dma_desc[1], (uint32_t) &adc_instances[0]->hw->RESULT.reg, dest_ptr_adr[0]);
-	setup_transfer_descriptor(&dma_desc[1], &dma_desc[0], (uint32_t) &adc_instances[0]->hw->RESULT.reg, dest_ptr_adr[1]);
+	setup_transfer_descriptor(&dma_desc[0], &dma_desc[1], (uint32_t) &adc_instances[0]->hw->RESULT.reg, dest_ptr_adr[0],5);
+	setup_transfer_descriptor(&dma_desc[1], &dma_desc[0], (uint32_t) &adc_instances[0]->hw->RESULT.reg, dest_ptr_adr[1],5);
 	dma_add_descriptor(dma_resource[0], &dma_desc[0]);
 	dma_register_callback(dma_resource[0], dma_callback_transfer_done0, DMA_CALLBACK_TRANSFER_DONE); //temporarily, for debug purposes.
 	dma_enable_callback(dma_resource[0], DMA_CALLBACK_TRANSFER_DONE);
@@ -150,8 +151,8 @@ void configure_adc_dma(dma_resource_t* dma_resource[2], adc_module_t* adc_instan
 
 	// configure DMA for ADC1
 	configure_adc_dma_resource(dma_resource[1], ADC1_DMAC_ID_RESRDY);
-	setup_transfer_descriptor(&dma_desc[2], &dma_desc[3], (uint32_t) &adc_instances[1]->hw->RESULT.reg, dest_ptr_adr[2]);
-	setup_transfer_descriptor(&dma_desc[3], &dma_desc[2], (uint32_t) &adc_instances[1]->hw->RESULT.reg, dest_ptr_adr[3]);
+	setup_transfer_descriptor(&dma_desc[2], &dma_desc[3], (uint32_t) &adc_instances[1]->hw->RESULT.reg, dest_ptr_adr[2],4);
+	setup_transfer_descriptor(&dma_desc[3], &dma_desc[2], (uint32_t) &adc_instances[1]->hw->RESULT.reg, dest_ptr_adr[3],4);
 	dma_add_descriptor(dma_resource[1], &dma_desc[2]);
 	dma_register_callback(dma_resource[1], dma_callback_transfer_done1, DMA_CALLBACK_TRANSFER_DONE); //only for slave adc, since master prio is a little bit higher and the slave will be complete last.
 	dma_enable_callback(dma_resource[1], DMA_CALLBACK_TRANSFER_DONE);
