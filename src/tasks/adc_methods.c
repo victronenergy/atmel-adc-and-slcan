@@ -39,7 +39,7 @@ void configure_adc(adc_module_t *adc_instance0, adc_module_t *adc_instance1) {
 	config_adc.resolution		= ADC_RESOLUTION_CUSTOM;
 	config_adc.clock_source		= GCLK_GENERATOR_2;
 	config_adc.clock_prescaler	= ADC_CLOCK_PRESCALER_DIV16;
-	config_adc.reference		= ADC_REFERENCE_INTVCC2;
+	config_adc.reference		= ADC_REFERENCE_INTVCC0;
 	config_adc.negative_input	= ADC_NEGATIVE_INPUT_GND;
 	config_adc.freerunning		= false;
 	config_adc.left_adjust		= false;
