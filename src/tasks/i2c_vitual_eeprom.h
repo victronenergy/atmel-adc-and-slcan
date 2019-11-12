@@ -14,9 +14,8 @@ typedef struct {
 	uint16_t config_size;
 	uint8_t serial_no[16];
 	const uint16_t sw_rev;
-	uint16_t adc_tank_channel[2][5]; //double buffered, Channel 4-1 + vclamp
-	uint16_t adc_temp_channel[2][4]; //double buffered, Channel 4-1
 	uint16_t adc_counter; //counter, will be increased after each complete conversion round with buffer swap
+	uint16_t adc_channels[2][9]; //double buffered, vclamp, Tank Channel 4-1, Temp Channel 4-1
 } adc_i2c_eeprom_t;
 
 typedef union {

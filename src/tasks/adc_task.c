@@ -52,8 +52,7 @@ void vAdcTask(void *pvParameters){
 
 	TaskHandle_t xhandle = xTaskGetCurrentTaskHandle();
 	adc_i2c_eeprom_u eeprom_data = {.s.adc_counter = 0xFFFF,
-								 	.s.adc_tank_channel ={{0}},
-								 	.s.adc_temp_channel = {{0}},
+								 	.s.adc_channels ={{0}},
 								 	.s.preamble = {'V', 'E'},
 								 	.s.sw_rev=SW_VERSION,
 								 	.s.serial_no = {0}};
@@ -72,10 +71,10 @@ void vAdcTask(void *pvParameters){
 	// configure adc with dma
 	{
 		uint32_t dest_ptr_addr[4];
-		dest_ptr_addr[0] = (uint32_t) &(eeprom_data.s.adc_tank_channel[0]);
-		dest_ptr_addr[1] = (uint32_t) &(eeprom_data.s.adc_tank_channel[1]);
-		dest_ptr_addr[2] = (uint32_t) &(eeprom_data.s.adc_temp_channel[0]);
-		dest_ptr_addr[3] = (uint32_t) &(eeprom_data.s.adc_temp_channel[1]);
+		dest_ptr_addr[0] = (uint32_t) &(eeprom_data.s.adc_channels[0][0]);
+		dest_ptr_addr[1] = (uint32_t) &(eeprom_data.s.adc_channels[1][0]);
+		dest_ptr_addr[2] = (uint32_t) &(eeprom_data.s.adc_channels[0][5]);
+		dest_ptr_addr[3] = (uint32_t) &(eeprom_data.s.adc_channels[1][5]);
 
 		adc_module_t *adc_modules[2];
 		adc_modules[0] = adc_instance0;
