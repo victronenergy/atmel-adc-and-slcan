@@ -171,7 +171,6 @@ uart_command_return_t uart_command_get_serial(uint8_t cantask_id) {
 uart_command_return_t uart_command_get_version(uint8_t cantask_id) {
 	if (!usb_putc(GET_VERSION,cantask_id))
 		return ERROR_BUSY;
-	uint8_t hw_rev = readHWrev();
 	if (!usb_byte2ascii(hw_rev,cantask_id))
 		return ERROR_BUSY;
 	if (!usb_byte2ascii(SW_VER,cantask_id))

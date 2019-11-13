@@ -5,7 +5,10 @@
 
 /******** Internal Prototypes ********/
 void vApplicationStackOverflowHook(TaskHandle_t *pxTask, signed portCHAR *pcTaskName);
+uint8_t readHWrev(void);
 
+/******** Global Variables ********/
+hw_rev_t hw_rev = HW_REV_1;
 
 /******** Methods ********/
 /**
@@ -40,21 +43,8 @@ void board_init(void) {
 	port_pin_set_config(LEDPIN_C21_GREEN, &pin_conf_led);
 	port_pin_set_config(LEDPIN_C21_RED, &pin_conf_led);
 
-	//debug pins
-/*	struct port_config debug_port;
-	port_get_config_defaults(&debug_port);
-	debug_port.direction  = PORT_PIN_DIR_OUTPUT;
-
-	port_pin_set_config(PIN_PA15, &debug_port);
-	port_pin_set_config(PIN_PA14, &debug_port);
-	port_pin_set_config(PIN_PA19, &debug_port);
-	port_pin_set_config(PIN_PA20, &debug_port);
-
-	port_pin_set_output_level(PIN_PA15, false);
-	port_pin_set_output_level(PIN_PA14, false);
-	port_pin_set_output_level(PIN_PA19, false);
-	port_pin_set_output_level(PIN_PA20, false);
-*/
+	// fill global variable
+	hw_rev = readHWrev();
 
 	/* Set up the CAN TX/RX pins */
 	struct system_pinmux_config pin_config;
@@ -72,7 +62,7 @@ void board_init(void) {
  * @return return the number read from the resistors
  */
 uint8_t readHWrev(void) {
-	uint8_t rev = 0;
+	hw_rev_t rev = 0;
     struct port_config pin_conf;
     port_get_config_defaults(&pin_conf);
 
@@ -97,7 +87,7 @@ uint8_t readHWrev(void) {
     port_pin_set_config(HW_REV_DETECTION_1, &pin_conf);
     port_pin_set_config(HW_REV_DETECTION_2, &pin_conf);
 
-    return rev;
+	return rev;
 }
 
 

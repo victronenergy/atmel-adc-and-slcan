@@ -140,9 +140,8 @@ int main(void) {
 	}
 	ulog_s("\r\n");
 
-	uint8_t rev = readHWrev();
 	ulog_s("detected HW rev: ");
-	xlog(&rev,1);
+	xlog((uint8_t *) &hw_rev,1);
 	ulog_s("\r\n");
 
 	ulog_s("prepare Tasks\r\n");
