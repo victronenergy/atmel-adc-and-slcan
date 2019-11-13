@@ -37,8 +37,8 @@ void board_init(void) {
 	port_get_config_defaults(&pin_conf_led);
 
 	pin_conf_led.direction  = PORT_PIN_DIR_OUTPUT;
-	port_pin_set_config(PIN_PA12, &pin_conf_led);
-	port_pin_set_config(PIN_PA13, &pin_conf_led);
+	port_pin_set_config(LEDPIN_C21_GREEN, &pin_conf_led);
+	port_pin_set_config(LEDPIN_C21_RED, &pin_conf_led);
 
 	//debug pins
 /*	struct port_config debug_port;
