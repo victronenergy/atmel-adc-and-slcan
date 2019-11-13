@@ -7,6 +7,7 @@
 #include "i2c_slave.h"
 #include <i2c_slave_interrupt.h>
 #include <log.h>
+#include <board_setup.h>
 
 
 /******** Global Variables ********/
@@ -44,15 +45,31 @@ void configure_i2c_slave(i2c_module_t *i2c_module, uint8_t slave_address) {
 	config_i2c_slave.transfer_speed 				= I2C_SLAVE_SPEED_STANDARD_AND_FAST;
 	config_i2c_slave.address        				= slave_address;
 	config_i2c_slave.address_mode   				= I2C_SLAVE_ADDRESS_MODE_MASK;
-	config_i2c_slave.pinmux_pad0					= ADC_I2C_SLAVE_SDA_PINMUX;
-	config_i2c_slave.pinmux_pad1					= ADC_I2C_SLAVE_SCK_PINMUX;
 	config_i2c_slave.scl_stretch_only_after_ack_bit	= false;
 	config_i2c_slave.buffer_timeout					= 1000;
 	config_i2c_slave.enable_nack_on_address			= false;
 
-	/* Initialize and enable device with config_i2c_slave */
-	if (i2c_slave_init(i2c_module, ADC_I2C_SLAVE_MODULE, &config_i2c_slave) != STATUS_OK) {
-		ulog_s("ERROR: while setup I2C!\r\n");
+	switch (hw_rev) {
+		case HW_REV_1:
+			config_i2c_slave.pinmux_pad0					= HW_REV_1_ADC_I2C_SLAVE_SDA_PINMUX;
+			config_i2c_slave.pinmux_pad1					= HW_REV_1_ADC_I2C_SLAVE_SCK_PINMUX;
+
+			/* Initialize and enable device with config_i2c_slave */
+			if (i2c_slave_init(i2c_module, HW_REV_1_ADC_I2C_SLAVE_MODULE, &config_i2c_slave) != STATUS_OK) {
+				ulog_s("ERROR: while setup I2C!\r\n");
+			}
+			break;
+		case HW_REV_2:
+			config_i2c_slave.pinmux_pad0					= HW_REV_2_ADC_I2C_SLAVE_SDA_PINMUX;
+			config_i2c_slave.pinmux_pad1					= HW_REV_2_ADC_I2C_SLAVE_SCK_PINMUX;
+
+			/* Initialize and enable device with config_i2c_slave */
+			if (i2c_slave_init(i2c_module, HW_REV_2_ADC_I2C_SLAVE_MODULE, &config_i2c_slave) != STATUS_OK) {
+				ulog_s("ERROR: while setup I2C!\r\n");
+			}
+			break;
+		default:
+			break;
 	}
 
 	i2c_slave_register_callback(i2c_module, i2c_callback_master_write_request, I2C_SLAVE_CALLBACK_READ_REQUEST); //master wants to read, we have to write
