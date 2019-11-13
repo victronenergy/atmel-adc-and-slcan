@@ -1,4 +1,5 @@
 #include "adc_task.h"
+#include "control_leds.h"
 #include <asf.h>
 #include <board_setup.h>
 #include <log.h>
@@ -35,16 +36,11 @@ void board_init(void) {
 	struct port_config pin_conf;
 	port_get_config_defaults(&pin_conf);
 
-	// LED
-	struct port_config pin_conf_led;
-	port_get_config_defaults(&pin_conf_led);
-
-	pin_conf_led.direction  = PORT_PIN_DIR_OUTPUT;
-	port_pin_set_config(LEDPIN_C21_GREEN, &pin_conf_led);
-	port_pin_set_config(LEDPIN_C21_RED, &pin_conf_led);
-
 	// fill global variable
 	hw_rev = readHWrev();
+
+	// setup LEDs
+	setup_leds();
 
 	/* Set up the CAN TX/RX pins */
 	struct system_pinmux_config pin_config;

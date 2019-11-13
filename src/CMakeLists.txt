@@ -237,7 +237,9 @@ set(SOURCE_FILES
 		tasks/adc_methods.c
 		tasks/adc_methods.h
 		tasks/can_methods.c
-		tasks/can_methods.h)
+		tasks/can_methods.h
+		utils/control_leds.c
+		utils/control_leds.h)
 
 
 

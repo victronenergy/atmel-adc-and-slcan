@@ -6,6 +6,7 @@
 #include <log.h>
 #include <ctype.h>
 #include <board_setup.h>
+#include <control_leds.h>
 #include "can.h"
 #include "usb.h"
 #include "slcan.h"
@@ -95,7 +96,7 @@ uart_command_return_t exec_uart_cmd(struct can_module *can_module, Can *can_inst
 			// open CAN channel
 			return_code = uart_command_open_can_channel(can_module, can_instance, can_bitrate, can_flags);
 			if(return_code != RETURN_ERROR) {
-				port_pin_set_output_level(LEDPIN_C21_GREEN, LED_ACTIVE);
+				set_led(GREEN_LED, LED_ACTIVE);
 			}
 			break;
 
@@ -103,7 +104,7 @@ uart_command_return_t exec_uart_cmd(struct can_module *can_module, Can *can_inst
 			// close CAN channel
 			return_code = uart_command_close_can_channel(can_module, can_flags);
 			if(return_code != RETURN_ERROR) {
-				port_pin_set_output_level(LEDPIN_C21_GREEN, LED_INACTIVE);
+				set_led(GREEN_LED, LED_INACTIVE);
 			}
 			break;
 
@@ -111,7 +112,7 @@ uart_command_return_t exec_uart_cmd(struct can_module *can_module, Can *can_inst
 			// open CAN channel but listen only
 			return_code = uart_command_listen_only_mode(can_module, can_instance, can_bitrate, can_flags);
 			if(return_code != RETURN_ERROR) {
-				port_pin_set_output_level(LEDPIN_C21_GREEN, LED_ACTIVE);
+				set_led(GREEN_LED, LED_ACTIVE);
 			}
 			break;
 

@@ -62,6 +62,7 @@ CSRCS = ${LIB_CSRCS}\
 		tasks/uart_methods.c \
 		utils/board_setup.c \
 		utils/comm_interface_setup.c \
+		utils/control_leds.c \
 		canbus/usb.c	\
 		tasks/i2c_vitual_eeprom.c \
 		tasks/adc_methods.c \

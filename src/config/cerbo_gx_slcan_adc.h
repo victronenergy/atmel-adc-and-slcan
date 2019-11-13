@@ -32,8 +32,10 @@ void system_board_init(void);
 /** \name LED definitions
  *
  */
-#define LEDPIN_C21_GREEN		PIN_PA12
-#define LEDPIN_C21_RED			PIN_PA13
+#define HW_REV_1_LEDPIN_C21_GREEN		PIN_PA12
+#define HW_REV_1_LEDPIN_C21_RED			PIN_PA13
+#define HW_REV_2_LEDPIN_C21_GREEN		PIN_PA10
+#define HW_REV_2_LEDPIN_C21_RED			PIN_PA11
 #define LED_ACTIVE              false
 #define LED_INACTIVE            !LED_ACTIVE
 /** @} */

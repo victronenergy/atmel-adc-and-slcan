@@ -7,6 +7,7 @@
 #include <usb.h>
 #include <cmsis/samc21/include/component/can.h>
 #include <can.h>
+#include "control_leds.h"
 #include "uart_methods.h"
 #include "can_methods.h"
 #include "stack_task.h"
@@ -51,8 +52,8 @@ void vCanTask(void *pvParameters) {
 
 
 	// initially both LEDs off
-	port_pin_set_output_level(LEDPIN_C21_GREEN, LED_INACTIVE);
-	port_pin_set_output_level(LEDPIN_C21_RED, LED_INACTIVE);
+	set_led(RED_LED, LED_INACTIVE);
+	set_led(GREEN_LED, LED_INACTIVE);
 
 	configure_usart_callbacks(usart_instance, cantask_id);
 

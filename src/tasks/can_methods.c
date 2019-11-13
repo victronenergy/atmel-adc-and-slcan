@@ -5,6 +5,7 @@
 #include "can.h"
 #include "can_task.h"
 #include <usb.h>
+#include <control_leds.h>
 #include "can_methods.h"
 #include "slcan.h"
 #include "uart_methods.h"
@@ -24,7 +25,7 @@ bool check_and_transfer_can_message_to_uart(struct can_module *const can_module,
 	// check for errors
 	uint32_t status = can_read_interrupt_status(can_module);
 	if (status & CAN_PROTOCOL_ERROR_ARBITRATION) {
-		port_pin_set_output_level(LEDPIN_C21_RED, LED_ACTIVE);
+		set_led(RED_LED, LED_ACTIVE);
 		can_clear_interrupt_status(can_module, CAN_PROTOCOL_ERROR_ARBITRATION);
 /*		c_log_s("p1");
 		uint32_t prot_status = can_read_protocal_status(can_module);
@@ -34,7 +35,7 @@ bool check_and_transfer_can_message_to_uart(struct can_module *const can_module,
 		}*/
 	}
 	if (status & CAN_PROTOCOL_ERROR_DATA) {
-		port_pin_set_output_level(LEDPIN_C21_RED, LED_ACTIVE);
+		set_led(RED_LED, LED_ACTIVE);
 		can_clear_interrupt_status(can_module, CAN_PROTOCOL_ERROR_DATA);
 /*		c_log_s("p2");
 		uint32_t prot_status = can_read_protocal_status(can_module);
@@ -58,13 +59,13 @@ bool check_and_transfer_can_message_to_uart(struct can_module *const can_module,
 		// lost a message flag is set
 		if(rx_fifo_status & CAN_RXF0S_RF0L){
 			ulog_s("message lost!F0\r\n");
-			port_pin_set_output_level(LEDPIN_C21_RED, LED_ACTIVE);
+			set_led(RED_LED, LED_ACTIVE);
 		}
 
 		// fifo full flag is set
 		if(rx_fifo_status & CAN_RXF0S_F0F){
 			ulog_s("FIFO full!F0\r\n");
-			port_pin_set_output_level(LEDPIN_C21_RED, LED_ACTIVE);
+			set_led(RED_LED, LED_ACTIVE);
 		}
 
 		if (can_get_rx_fifo_0_element(can_module, &rx_message, fifo_getindex) == STATUS_OK) {
@@ -119,9 +120,7 @@ bool check_and_transfer_can_message_to_uart(struct can_module *const can_module,
 			if (can_id == 4) {
 				if (rx_message.data[0] != *sequence_counter) {
 					// we have a missmatch!
-					port_pin_set_output_level(PIN_PA14, true);
 					*sequence_counter = rx_message.data[0];
-					port_pin_set_output_level(PIN_PA14, false);
 				}
 				// setup counter for next expected sequence number
 				(*sequence_counter)++;
@@ -143,7 +142,7 @@ bool check_and_transfer_can_message_to_uart(struct can_module *const can_module,
  */
 void reset_can_errorflags(can_flags_t *CAN_flags) {
 	//currently just the led
-	port_pin_set_output_level(LEDPIN_C21_RED, LED_INACTIVE);
+	set_led(RED_LED, LED_INACTIVE);
 }
 
 
