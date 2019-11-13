@@ -140,6 +140,11 @@ int main(void) {
 	}
 	ulog_s("\r\n");
 
+	uint8_t rev = readHWrev();
+	ulog_s("detected HW rev: ");
+	xlog(&rev,1);
+	ulog_s("\r\n");
+
 	ulog_s("prepare Tasks\r\n");
 	TaskHandle_t task_handles[2];
 	TaskHandle_t can_task = vCreateCanTask(&params_task);
