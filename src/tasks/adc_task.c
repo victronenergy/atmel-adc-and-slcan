@@ -67,6 +67,19 @@ void vAdcTask(void *pvParameters){
 	struct i2c_slave_packet i2c_packet;
 	set_i2c_slave_data_packet(&i2c_packet);
 
+	//do startup calibration
+	uint16_t gain_corrections[2] = {0};
+	int16_t offset_corrections[2] = {0};
+	bool do_calibration = false;
+	if (hw_rev >= HW_REV_2){
+		adc_module_t *adc_modules[2];
+		adc_modules[0] = adc_instance0;
+		adc_modules[1] = adc_instance1;
+
+		adc_perform_calibration(adc_modules, gain_corrections, offset_corrections);
+		do_calibration = true;
+	}
+
 	DmacDescriptor dma_desc[4]= {SECTION_DMAC_DESCRIPTOR};
 
 	// configure adc with dma
@@ -85,7 +98,7 @@ void vAdcTask(void *pvParameters){
 		dma_resources[0] = dma_adc_resource0;
 		dma_resources[1] = dma_adc_resource1;
 
-		configure_adc_dma(dma_resources, adc_modules, dma_desc, dest_ptr_addr);
+		configure_adc_dma(dma_resources, adc_modules, dma_desc, dest_ptr_addr, do_calibration, gain_corrections, offset_corrections);
 	}
 
 	// configure i2c slave
