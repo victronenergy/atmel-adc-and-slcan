@@ -54,7 +54,8 @@ void vAdcTask(void *pvParameters){
 	adc_i2c_eeprom_u eeprom_data = {.s.adc_counter = 0xFFFF,
 								 	.s.adc_channels ={{0}},
 								 	.s.preamble = {'V', 'E'},
-								 	.s.sw_rev=SW_VERSION,
+								 	.s.sw_rev=(uint16_t) SW_VERSION,
+								 	.s.hw_rev= hw_rev,
 								 	.s.serial_no = {0}};
 	eeprom_data.s.config_size = (EEPROM_USED_SIZE - ((uint32_t) eeprom_data.s.serial_no - (uint32_t) &eeprom_data));
 	set_eeprom_data_pointer(&eeprom_data);
