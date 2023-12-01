@@ -7,7 +7,7 @@
 
 
 /******** Internal Prototypes ********/
-void vStackTask(void *pvParameters);
+_Noreturn void vStackTask(void *pvParameters);
 void test_mark(UBaseType_t *rev, TaskHandle_t *task, bool override);
 
 
@@ -78,7 +78,7 @@ void task_wdt_reset(TaskHandle_t *task) {
  * this task will be used to enable all other tasks in the given sequence
  * @param pvParameters not used
  */
-void vStackTask(void *pvParameters) {
+_Noreturn void vStackTask(void *pvParameters) {
 	ulog_s("stacktask begin loop\r\n");
 
 	// check if the freemem array will be big enough to hold all task values

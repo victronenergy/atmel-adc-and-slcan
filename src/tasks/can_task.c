@@ -14,7 +14,7 @@
 
 
 /******** Internal Prototypes ********/
-void vCanTask(void *pvParameters);
+_Noreturn void vCanTask(void *pvParameters);
 
 
 /******** Methods ********/
@@ -26,7 +26,7 @@ void vCanTask(void *pvParameters);
  * @param pvParameters contains the pointers to the modules and structs that should not live inside the task, but as
  * local variable in main.
  */
-void vCanTask(void *pvParameters) {
+_Noreturn void vCanTask(void *pvParameters) {
 
 	vTaskDelay((const TickType_t) 10);
 
