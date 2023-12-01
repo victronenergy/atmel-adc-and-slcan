@@ -14,11 +14,11 @@
 
 #if CUSTOM_BOARD == CUSTOM_BOARD_TEMPLATE
 # include  "custom_board_template.h"
-#elif CUSTOM_BOARD == CUSTOM_BOARD_1 	//change name to your needs!
-# include  "samc21_usbcan.h"			//change name to your needs!
-#elif CUSTOM_BOARD == CERBO_SLCAN_ADC 	//change name to your needs!
-# include  "cerbo_gx_slcan_adc.h"		//change name to your needs!
+#elif CUSTOM_BOARD == CUSTOM_BOARD_1
+# include  "samc21_usbcan.h"
+#elif CUSTOM_BOARD == CERBO_SLCAN_ADC
+# include  "cerbo_gx_slcan_adc.h"
 #else
-#  error "No known Unipoin board defined"
+#  error "No known custom board defined"
 #endif
 #endif //SAMC_FREERTOS_CUSTOM_BOARD_H
