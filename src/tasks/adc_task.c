@@ -17,7 +17,7 @@
 #endif
 
 /******** Internal Prototypes ********/
-void vAdcTask(void *pvParameters);
+_Noreturn void vAdcTask(void *pvParameters);
 
 
 /******** Methods ********/
@@ -27,7 +27,7 @@ void vAdcTask(void *pvParameters);
  * @param pvParameters contains the pointers to the modules and structs that should not live inside the task, but as
  * local variable in main.
  */
-void vAdcTask(void *pvParameters){
+_Noreturn void vAdcTask(void *pvParameters){
 	configASSERT(pvParameters);
 	configASSERT(((adctask_params *)pvParameters)->adc_instance0);
 	configASSERT(((adctask_params *)pvParameters)->adc_instance1);
