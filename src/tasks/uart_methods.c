@@ -525,7 +525,7 @@ uart_command_return_t uart_command_send_29bit_id(struct can_module *can_module, 
 	// store data length
 	tx_element.T1.bit.DLC = ascii2byte(++cmd_buf_pntr);
 
-	// check number of data bytes supplied against data lenght byte
+	// check number of data bytes supplied against data length byte
 	if (tx_element.T1.bit.DLC != ((cmd_len - 10) / 2)) {
 		return RETURN_ERROR;
 	}
