@@ -9,6 +9,9 @@
 #include "can.h"
 #include <component/rstc.h>
 
+#define STR_HELPER(x) #x
+#define STR(x) STR_HELPER(x)
+#define SOFTWARE_REV "SW version: " STR(SW_VERSION) "\n\r"
 
 int main(void) {
 	system_init();
@@ -140,6 +143,7 @@ int main(void) {
 	}
 	ulog_s("\r\n");
 
+	ulog_s(SOFTWARE_REV);
 	ulog_s("detected HW rev: ");
 	xlog((uint8_t *) &hw_rev,1);
 	ulog_s("\r\n");
