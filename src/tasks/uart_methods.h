@@ -39,4 +39,14 @@ typedef enum {
  */
 uart_command_return_t exec_uart_cmd(struct can_module *can_module, Can *can_instance, uint8_t *cmd_buf, can_flags_t *can_flags, uint8_t cantask_id, uint32_t *can_bitrate);
 
+/**
+ * can be called to open the physical can_bus interface
+ * @param can_module can-module to work with
+ * @param can_instance can-instance to work with
+ * @param can_bitrate pointer to a field to store the selected bitrate in, the bitrate is set before the can-module is initialized
+ * @param can_flags struct with can_flags
+ * @return
+ */
+uart_command_return_t uart_command_open_can_channel(struct can_module *can_module, Can *can_instance, uint32_t *can_bitrate, can_flags_t *can_flags);
+
 #endif //SAMC_FREERTOS_UART_COMMANDS_H

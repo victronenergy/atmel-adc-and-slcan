@@ -22,29 +22,6 @@
 bool check_and_transfer_can_message_to_uart(struct can_module *const can_module, uint8_t cantask_id, uint8_t *sequence_counter) {
 	bool messsage_read = false;
 
-	// check for errors
-	uint32_t status = can_read_interrupt_status(can_module);
-	if (status & CAN_PROTOCOL_ERROR_ARBITRATION) {
-		set_led(RED_LED, LED_ACTIVE);
-		can_clear_interrupt_status(can_module, CAN_PROTOCOL_ERROR_ARBITRATION);
-/*		c_log_s("p1");
-		uint32_t prot_status = can_read_protocal_status(can_module);
-		if ((prot_status&0x07) != 0) {
-			c_log(':');
-			c_log((uint8_t) (0x30 + (prot_status & 0x07)));
-		}*/
-	}
-	if (status & CAN_PROTOCOL_ERROR_DATA) {
-		set_led(RED_LED, LED_ACTIVE);
-		can_clear_interrupt_status(can_module, CAN_PROTOCOL_ERROR_DATA);
-/*		c_log_s("p2");
-		uint32_t prot_status = can_read_protocal_status(can_module);
-		if ((prot_status&0x07) != 0) {
-			c_log(':');
-			c_log((uint8_t) (0x30 + (prot_status & 0x07)));
-		}*/
-	}
-
 	//FIFO buffers status
 	uint32_t rx_fifo_status = can_rx_get_fifo_status(can_module, 0);
 
@@ -137,10 +114,54 @@ bool check_and_transfer_can_message_to_uart(struct can_module *const can_module,
 
 
 /**
- * method usually resets the errorflags in the SJA1000, here we to not more than reset the ERROR LED
- * @param CAN_flags pointer to the error flags, currently not used
+ * test for specific interrupt flag and reset the flag is found.
+ * also set the red error led and return the status of the flag
+ * @param can_module can module work on
+ * @param status pointer to a previous read interrupt status of the can module
+ * @param flag enum flag to search for
+ * @return status of the tested flag
  */
-void reset_can_errorflags(can_flags_t *CAN_flags) {
+bool static inline can_handle_interrupt_status(struct can_module *can_module, const uint32_t *status, enum can_interrupt_source flag) {
+	if(*status & flag) {
+		can_clear_interrupt_status(can_module, flag);
+		set_led(RED_LED, LED_ACTIVE);
+		return true;
+	}
+	return false;
+}
+
+
+/**
+ * test the interrupt flags and reset some of them
+ * restarts canbus if a bus-off interrupt is found
+ * @param can_module can module we want to setup and start
+ * @param can_instance pointer to the hardware of the can interface
+ * @param can_flags pointer to the can flags and status structure
+ * @param can_bitrate pointer to the currently configured can bitrate
+ */
+void can_error_handling(struct can_module *can_module, Can *can_instance, can_flags_t *can_flags, uint32_t *can_bitrate) {
+	// check for errors
+	uint32_t status = can_read_interrupt_status(can_module);
+
+	// arbitration_lost bit
+	can_handle_interrupt_status(can_module, &status, CAN_PROTOCOL_ERROR_ARBITRATION);
+
+	// error_data bit
+	can_handle_interrupt_status(can_module, &status, CAN_PROTOCOL_ERROR_DATA);
+
+	// bus_error bit
+	if (can_handle_interrupt_status(can_module, &status, CAN_BUS_OFF)) {
+		can_flags->bus_on = false;
+		uart_command_open_can_channel(can_module, can_instance, can_bitrate, can_flags);
+	}
+}
+
+
+/**
+ * method usually resets the errorflags in the SJA1000, here we to not more than reset the ERROR LED
+ * @param can_flags pointer to the error flags, currently not used
+ */
+void reset_can_errorflags(can_flags_t *can_flags) {
 	//currently just the led
 	set_led(RED_LED, LED_INACTIVE);
 }
@@ -207,5 +228,4 @@ uint8_t transmit_CAN(struct can_module *const can_module, struct can_tx_element 
 	} else {
 		return ERROR_BUSY;
 	}
-
 }
