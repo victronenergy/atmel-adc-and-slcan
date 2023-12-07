@@ -1,4 +1,4 @@
-set(CMAKE_OSX_SYSROOT "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk")
+set(CMAKE_OSX_SYSROOT "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk")
 cmake_minimum_required(VERSION 3.8)
 project(samc_freertos)
 
@@ -292,8 +292,8 @@ include_directories(.)
 
 add_definitions(-D ARM_MATH_CM0PLUS=true)
 add_definitions(-D BOARD=USER_BOARD)
-add_definitions(-D CUSTOM_BOARD=PENTA_SLCAN_ADC)
-add_definitions(-D __SAMC21G18A__)
+add_definitions(-D CUSTOM_BOARD=CERBO_SLCAN_ADC)
+add_definitions(-D __SAMC21G17A__)
 add_definitions(-D USART_CALLBACK_MODE=true)
 add_definitions(-D ADC_CALLBACK_MODE=true)
 add_definitions(-D I2C_SLAVE_CALLBACK_MODE=true)

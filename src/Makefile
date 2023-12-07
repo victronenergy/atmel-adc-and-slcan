@@ -157,9 +157,9 @@ endif
 endif
 
 ifeq ($(os),OSX)
-	OPENOCD := $(OPENOCD) -f ../openocd_samc21.conf -s /opt/local/share/openocd/scripts/
+	OPENOCD := $(OPENOCD) -s /opt/local/share/openocd/scripts/
 else
-	OPENOCD := $(OPENOCD) -f ../openocd_samc21.conf
+	OPENOCD := $(OPENOCD)
 endif
 
 
@@ -521,7 +521,7 @@ rebuilddoc: cleandoc doc
 # Program the Device
 .PHONY: program
 program: all
-	$(OPENOCD) -c "program $(TARGET_FLASH) verify reset exit"
+	$(OPENOCD) -f ../openocd_samc21.conf -c "program $(TARGET_FLASH) verify reset exit"
 	
 	
 	
