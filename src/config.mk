@@ -50,7 +50,7 @@ PART = SAMC21G17A
 
 # Application target name. Given with suffix .a for library and .elf for a
 # standalone application.
-TARGET_FLASH = cmake-build-debug/samc21_slcan_adc_sw$(SW_VERSION).elf
+TARGET_FLASH ?= cmake-build-debug/samc21_slcan_adc_sw$(SW_VERSION).elf
 TARGET_SRAM = cmake-build-debug/samc21_slcan_adc_sw$(SW_VERSION).elf
 
 # List of C source files.
