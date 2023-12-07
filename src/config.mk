@@ -92,8 +92,8 @@ LIBS =  \
        arm_cortexM0l_math                                
 
 # Path relative to top level directory pointing to a linker script.
-LINKER_SCRIPT_FLASH = lib/ASF/sam0/utils/linker_scripts/samc21/gcc/samc21j18a_flash.ld
-LINKER_SCRIPT_SRAM  = lib/ASF/sam0/utils/linker_scripts/samc21/gcc/samc21j18a_sram.ld
+LINKER_SCRIPT_FLASH = linker_script/samc21g17a_flash_victron.ld
+#LINKER_SCRIPT_SRAM  = lib/ASF/sam0/utils/linker_scripts/samc21/gcc/samc21g17a_sram.ld
 
 # Path relative to top level directory pointing to a linker script.
 DEBUG_SCRIPT_FLASH = lib/ASF/sam0/boards/samc21_xplained_pro/debug_scripts/gcc/samc21_xplained_pro_flash.gdb
