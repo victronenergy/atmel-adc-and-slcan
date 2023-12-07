@@ -13,6 +13,9 @@
 #define STR(x) STR_HELPER(x)
 #define SOFTWARE_REV "SW version: " STR(SW_VERSION) "\n\r"
 
+#define VICTRON_SECTION __attribute__((__used__, section(".victron")))
+VICTRON_SECTION static const uint8_t VERSION = SW_VERSION;
+
 int main(void) {
 	system_init();
 	delay_init();
