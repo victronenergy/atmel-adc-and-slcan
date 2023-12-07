@@ -86,6 +86,7 @@ _Noreturn void vCanTask(void *pvParameters) {
 		 * CAN TO UART HANDLING
 		 */
 		if (can_flags.bus_on) {
+			can_error_handling(&can_module, can_instance, &can_flags, &can_bitrate);
 			bool new_can_message = check_and_transfer_can_message_to_uart(&can_module, cantask_id, &sequence_counter);
 			if (new_can_message) {
 				usb_send(usart_instance, cantask_id);
