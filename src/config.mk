@@ -37,7 +37,7 @@
 #
 
 include lib/include.mk
-include sw_version.inc
+SW_VERSION := $(shell cat sw_version.inc)
 
 # Path to top level ASF directory relative to this project directory.
 PRJ_PATH = .

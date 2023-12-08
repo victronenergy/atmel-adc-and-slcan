@@ -290,6 +290,7 @@ include_directories(velib/inc)
 include_directories(canbus)
 include_directories(.)
 
+file (STRINGS "sw_version.inc" SW_VERSION)
 add_definitions(-D ARM_MATH_CM0PLUS=true)
 add_definitions(-D BOARD=USER_BOARD)
 add_definitions(-D CUSTOM_BOARD=CERBO_SLCAN_ADC)
@@ -301,6 +302,7 @@ add_definitions(-D __FREERTOS__)
 add_definitions(-D SYSTICK_MODE)
 add_definitions(-D NDEBUG)
 add_definitions(-D TC_ASYNC=true)
+add_definitions(-D SW_VERSION=${SW_VERSION})
 
 add_executable(src ${SOURCE_FILES})
 
